@@ -222,7 +222,7 @@ tbody tr:hover td{background:var(--surface2);}
         <button class="btn btn-primary" onclick="openModalKho()">+ Thêm hàng</button>
       </div>
       <div class="tbl-card"><div class="tbl-wrap">
-        <table><thead><tr><th>Mã</th><th>Tên hàng</th><th>Tổng tồn</th><th>Đang đặt</th><th>Còn lại</th><th>Giá vốn</th><th>Giá bán</th><th>Tình trạng</th><th></th></tr></thead>
+        <table><thead><tr><th>Mã</th><th>Tên hàng</th><th>Tổng tồn</th><th>Còn lại</th><th>Giá gốc</th><th>Giá sale</th><th>Giá bán</th><th>Tiết kiệm</th><th>Lời/cái</th><th>Tình trạng</th><th></th></tr></thead>
         <tbody id="khoBody"><tr><td colspan="9" class="loading">Đang kết nối...</td></tr></tbody></table>
       </div></div>
     </div>
@@ -391,13 +391,23 @@ function renderKho() {
   recalc();
   document.getElementById('khoBody').innerHTML = S.kho.length ? S.kho.map(k=>{
     let con = (k.ton||0)-(k.dat||0);
-    return `<tr><td class="mono" style="color:var(--text3)">${k.ma}</td><td style="font-weight:500">${k.ten}</td>
-    <td class="mono">${fmtN(k.ton)}</td><td class="mono" style="color:var(--amber)">${fmtN(k.dat)}</td>
+    let tietKiem = (k.giaGoc||0)-(k.von||0);
+    let loiCai = (k.gia||0)-(k.von||0);
+    let pctSale = k.giaGoc>0 ? Math.round(tietKiem/k.giaGoc*100) : 0;
+    let pctLoi = k.von>0 ? Math.round(loiCai/k.von*100) : 0;
+    return `<tr>
+    <td class="mono" style="color:var(--text3)">${k.ma}</td>
+    <td style="font-weight:500">${k.ten}</td>
+    <td class="mono">${fmtN(k.ton)}</td>
     <td class="mono" style="font-weight:600;color:${con<=5?'var(--red)':'var(--green)'}">${fmtN(con)}</td>
-    <td class="mono" style="color:var(--text2)">${fmt(k.von)}</td><td class="mono" style="font-weight:500">${fmt(k.gia)}</td>
+    <td class="mono" style="color:var(--text2)">${k.giaGoc?fmt(k.giaGoc):'—'}</td>
+    <td class="mono" style="color:var(--amber)">${fmt(k.von)} ${pctSale>0?'<span style="font-size:10px;color:#27500A">(-'+pctSale+'%)</span>':''}</td>
+    <td class="mono" style="font-weight:500">${fmt(k.gia)}</td>
+    <td class="mono" style="color:#27500A">${tietKiem>0?fmt(tietKiem):'—'}</td>
+    <td class="mono ${loiCai>=0?'profit-pos':'profit-neg'}">${loiCai>=0?'+':''}${fmt(loiCai)} <span style="font-size:10px">(${pctLoi}%)</span></td>
     <td><span class="badge ${con<=5?'badge-low':'badge-ok'}">${con<=5?'Sắp hết':'Còn hàng'}</span></td>
     <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editKho(${k.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delKho(${k.id})">🗑</button></td></tr>`;
-  }).join('') : '<tr><td colspan="9" class="empty-state">Chưa có sản phẩm</td></tr>';
+  }).join('') : '<tr><td colspan="11" class="empty-state">Chưa có sản phẩm</td></tr>';
 }
 
 function renderKH() {
@@ -507,14 +517,38 @@ function openModalKho(id) {
       <div class="form-group"><label class="form-label">Mã SP</label><input class="form-input" id="kMa" value="${k?k.ma:''}" placeholder="SP001"></div>
       <div class="form-group"><label class="form-label">Tên sản phẩm</label><input class="form-input" id="kTen" value="${k?k.ten:''}" placeholder="Tên hàng..."></div>
       <div class="form-group"><label class="form-label">Số lượng tồn</label><input class="form-input" id="kTon" type="number" value="${k?k.ton:0}" min="0"></div>
-      <div class="form-group"><label class="form-label">Giá vốn/cái (đ)</label><input class="form-input" id="kVon" type="number" value="${k?k.von:0}" min="0"></div>
-      <div class="form-group full"><label class="form-label">Giá bán/cái (đ)</label><input class="form-input" id="kGia" type="number" value="${k?k.gia:0}" min="0"></div>
+      <div class="form-group"><label class="form-label">Giá gốc/cái (đ)</label><input class="form-input" id="kGiaGoc" type="number" value="${k?k.giaGoc||0:0}" min="0" placeholder="Giá niêm yết gốc" oninput="calcKhoPreview()"></div>
+      <div class="form-group"><label class="form-label">Giá săn sale/cái (đ) = vốn</label><input class="form-input" id="kVon" type="number" value="${k?k.von:0}" min="0" placeholder="Giá bạn mua được" oninput="calcKhoPreview()"></div>
+      <div class="form-group"><label class="form-label">Giá bán ra/cái (đ)</label><input class="form-input" id="kGia" type="number" value="${k?k.gia:0}" min="0" placeholder="Giá bán cho khách" oninput="calcKhoPreview()"></div>
     </div>
+    <div id="khoPreview"></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveKho(${id||'null'})">${k?'Lưu':'Thêm hàng'}</button></div>`);
+  calcKhoPreview();
+}
+
+function calcKhoPreview() {
+  let goc = parseInt(document.getElementById('kGiaGoc')?.value)||0;
+  let von = parseInt(document.getElementById('kVon')?.value)||0;
+  let ban = parseInt(document.getElementById('kGia')?.value)||0;
+  let el = document.getElementById('khoPreview');
+  if(!el || (!goc && !von && !ban)) return;
+  let tietKiem = goc-von;
+  let loiCai = ban-von;
+  let pctSale = goc>0?Math.round(tietKiem/goc*100):0;
+  let pctLoi = von>0?Math.round(loiCai/von*100):0;
+  let color = loiCai>0?'#27500A':loiCai<0?'#791F1F':'#6b6960';
+  let warn = loiCai<0?'<div style="color:#791F1F;font-size:12px;margin-top:6px">⚠ Bán dưới giá vốn — sẽ lỗ '+fmt(Math.abs(loiCai))+'/cái!</div>':
+             pctLoi<10&&ban>0?'<div style="color:#92400e;font-size:12px;margin-top:6px">Biên lợi thấp ('+pctLoi+'%) — cân nhắc tăng giá bán</div>':'';
+  el.innerHTML = `<div style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:12px;margin-top:4px;display:flex;gap:20px;flex-wrap:wrap;">
+    ${goc>0?'<span>Tiết kiệm so với gốc: <b style="color:#27500A">'+fmt(tietKiem)+' (-'+pctSale+'%)</b></span>':''}
+    <span>Lợi nhuận/cái: <b style="color:${color}">${loiCai>=0?'+':''}${fmt(loiCai)} (${pctLoi}%)</b></span>
+  </div>${warn}`;
 }
 function saveKho(id) {
   let obj={ma:document.getElementById('kMa').value.trim()||'SP'+S.nK,ten:document.getElementById('kTen').value.trim(),
-    ton:parseInt(document.getElementById('kTon').value)||0,von:parseInt(document.getElementById('kVon').value)||0,
+    ton:parseInt(document.getElementById('kTon').value)||0,
+    giaGoc:parseInt(document.getElementById('kGiaGoc').value)||0,
+    von:parseInt(document.getElementById('kVon').value)||0,
     gia:parseInt(document.getElementById('kGia').value)||0,dat:0};
   if(!obj.ten){alert('Vui lòng nhập tên!');return;}
   if(id){let i=S.kho.findIndex(k=>k.id==id);S.kho[i]={...obj,id,dat:S.kho[i].dat};}
