@@ -243,7 +243,7 @@ function showPage(p) {
 function renderAll() {
   if (!S) return;
   renderStats();
-  let active = ['dashboard','don','kho','kh'].find(p => document.getElementById('page-'+p).classList.contains('active')) || 'dashboard';
+  let active = ['dashboard','don','kho','kh'].find(p => { let el = document.getElementById('page-'+p); return el && el.classList.contains('active'); }) || 'dashboard';
   if (active == 'dashboard') renderDash();
   if (active == 'don') renderDon();
   if (active == 'kho') renderKho();
@@ -284,8 +284,8 @@ function renderDash() {
 function renderDon() {
   if (!S) return;
   recalc();
-  let q = (document.getElementById('searchDon').value || '').toLowerCase();
-  let f = document.getElementById('filterTT').value;
+  let searchEl = document.getElementById('searchDon'); let q = searchEl ? (searchEl.value || '').toLowerCase() : '';
+  let filterEl = document.getElementById('filterTT'); let f = filterEl ? filterEl.value : '';
   let rows = S.don.filter(d => (!q || d.kh.toLowerCase().includes(q)) && (!f || d.tt == f));
   let ttL = {coc:'Chưa cọc', dacoc:'Đã cọc', xong:'Hoàn thành'};
   document.getElementById('donBody').innerHTML = rows.length ? rows.map((d,i) => `<tr>
