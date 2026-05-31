@@ -22,24 +22,25 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ===================== CÔNG VIỆC =====================
 let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:8},
-  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
-  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:4,ten:'Tạo website / app quản lý',pts:9},
-  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
-  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:7,ten:'Đăng bài / content MXH',pts:5},
-  {id:8,ten:'Rep khách hàng',pts:4},
-  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
-  {id:10,ten:'Giao hàng / ship',pts:4},
-  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+  {id:1,ten:'Tìm nguồn hàng',pts:9},
+  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:3,ten:'Tạo website / app quản lý',pts:9},
+  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
+  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
+  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
+  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
 ];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvQtyDef = [
+  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
+  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
 let cvNextId = 100;
 
 function resetCV() {
   if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
   cvNextId = 100;
   renderCV();
 }
@@ -61,6 +62,34 @@ function addCVExtra() {
   renderCV();
 }
 function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function updateCVQty(id,who,val){
+  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
+  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
+  else t.q2=Math.max(0,parseInt(val)||0);
+  renderCV();
+}
+function cvQtyRow(t){
+  let pts1=(t.q1*t.pts).toFixed(1);
+  let pts2=(t.q2*t.pts).toFixed(1);
+  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
+    </div>
+    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
+    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
+      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
+      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
+    </div>
+  </div>`;
+}
 function calcCV() {
   let s1=0,s2=0,tot=0;
   [...cvTasks.def,...cvTasks.extra].forEach(t=>{
@@ -68,7 +97,8 @@ function calcCV() {
     else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
     else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
   });
-  return{s1,s2,tot};
+  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
+  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
 }
 function cvTaskRow(t,type) {
   let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
@@ -114,7 +144,7 @@ function renderCV() {
     </div>
     <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
   `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
   document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
     ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
     : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
@@ -247,24 +277,25 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ===================== CÔNG VIỆC =====================
 let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:8},
-  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
-  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:4,ten:'Tạo website / app quản lý',pts:9},
-  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
-  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:7,ten:'Đăng bài / content MXH',pts:5},
-  {id:8,ten:'Rep khách hàng',pts:4},
-  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
-  {id:10,ten:'Giao hàng / ship',pts:4},
-  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+  {id:1,ten:'Tìm nguồn hàng',pts:9},
+  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:3,ten:'Tạo website / app quản lý',pts:9},
+  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
+  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
+  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
+  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
 ];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvQtyDef = [
+  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
+  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
 let cvNextId = 100;
 
 function resetCV() {
   if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
   cvNextId = 100;
   renderCV();
 }
@@ -286,6 +317,34 @@ function addCVExtra() {
   renderCV();
 }
 function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function updateCVQty(id,who,val){
+  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
+  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
+  else t.q2=Math.max(0,parseInt(val)||0);
+  renderCV();
+}
+function cvQtyRow(t){
+  let pts1=(t.q1*t.pts).toFixed(1);
+  let pts2=(t.q2*t.pts).toFixed(1);
+  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
+    </div>
+    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
+    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
+      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
+      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
+    </div>
+  </div>`;
+}
 function calcCV() {
   let s1=0,s2=0,tot=0;
   [...cvTasks.def,...cvTasks.extra].forEach(t=>{
@@ -293,7 +352,8 @@ function calcCV() {
     else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
     else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
   });
-  return{s1,s2,tot};
+  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
+  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
 }
 function cvTaskRow(t,type) {
   let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
@@ -339,7 +399,7 @@ function renderCV() {
     </div>
     <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
   `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
   document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
     ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
     : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
@@ -472,24 +532,25 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ===================== CÔNG VIỆC =====================
 let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:8},
-  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
-  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:4,ten:'Tạo website / app quản lý',pts:9},
-  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
-  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:7,ten:'Đăng bài / content MXH',pts:5},
-  {id:8,ten:'Rep khách hàng',pts:4},
-  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
-  {id:10,ten:'Giao hàng / ship',pts:4},
-  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+  {id:1,ten:'Tìm nguồn hàng',pts:9},
+  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:3,ten:'Tạo website / app quản lý',pts:9},
+  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
+  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
+  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
+  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
 ];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvQtyDef = [
+  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
+  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
 let cvNextId = 100;
 
 function resetCV() {
   if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
   cvNextId = 100;
   renderCV();
 }
@@ -511,6 +572,34 @@ function addCVExtra() {
   renderCV();
 }
 function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function updateCVQty(id,who,val){
+  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
+  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
+  else t.q2=Math.max(0,parseInt(val)||0);
+  renderCV();
+}
+function cvQtyRow(t){
+  let pts1=(t.q1*t.pts).toFixed(1);
+  let pts2=(t.q2*t.pts).toFixed(1);
+  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
+    </div>
+    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
+    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
+      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
+      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
+    </div>
+  </div>`;
+}
 function calcCV() {
   let s1=0,s2=0,tot=0;
   [...cvTasks.def,...cvTasks.extra].forEach(t=>{
@@ -518,7 +607,8 @@ function calcCV() {
     else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
     else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
   });
-  return{s1,s2,tot};
+  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
+  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
 }
 function cvTaskRow(t,type) {
   let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
@@ -564,7 +654,7 @@ function renderCV() {
     </div>
     <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
   `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
   document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
     ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
     : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
@@ -892,8 +982,8 @@ tbody tr:hover td{background:var(--surface2);}
     <div style="margin-bottom:1.25rem;" id="cvProgWrap"></div>
     <div class="tbl-card" style="margin-bottom:12px;">
       <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);">
-        <span style="font-size:13px;font-weight:600;">📌 Công việc mặc định</span>
-        <span style="font-size:12px;color:var(--text3)">Nhấn tên để tick</span>
+        <span style="font-size:13px;font-weight:600;">📌 Công việc cố định + linh hoạt</span>
+        <span style="font-size:12px;color:var(--text3)">Tick tên hoặc nhập số lượng</span>
       </div>
       <div id="cvDefList"></div>
     </div>
@@ -1344,24 +1434,25 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ===================== CÔNG VIỆC =====================
 let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:8},
-  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
-  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:4,ten:'Tạo website / app quản lý',pts:9},
-  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
-  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:7,ten:'Đăng bài / content MXH',pts:5},
-  {id:8,ten:'Rep khách hàng',pts:4},
-  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
-  {id:10,ten:'Giao hàng / ship',pts:4},
-  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+  {id:1,ten:'Tìm nguồn hàng',pts:9},
+  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:3,ten:'Tạo website / app quản lý',pts:9},
+  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
+  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
+  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
+  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
 ];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvQtyDef = [
+  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
+  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
 let cvNextId = 100;
 
 function resetCV() {
   if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
   cvNextId = 100;
   renderCV();
 }
@@ -1383,6 +1474,34 @@ function addCVExtra() {
   renderCV();
 }
 function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function updateCVQty(id,who,val){
+  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
+  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
+  else t.q2=Math.max(0,parseInt(val)||0);
+  renderCV();
+}
+function cvQtyRow(t){
+  let pts1=(t.q1*t.pts).toFixed(1);
+  let pts2=(t.q2*t.pts).toFixed(1);
+  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
+    </div>
+    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
+    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
+      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
+      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
+      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
+      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
+    </div>
+  </div>`;
+}
 function calcCV() {
   let s1=0,s2=0,tot=0;
   [...cvTasks.def,...cvTasks.extra].forEach(t=>{
@@ -1390,7 +1509,8 @@ function calcCV() {
     else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
     else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
   });
-  return{s1,s2,tot};
+  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
+  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
 }
 function cvTaskRow(t,type) {
   let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
@@ -1436,7 +1556,7 @@ function renderCV() {
     </div>
     <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
   `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
   document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
     ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
     : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
