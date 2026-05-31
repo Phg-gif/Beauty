@@ -19,6 +19,216 @@ document.querySelectorAll('.nav-item').forEach(el => {
     }
   });
 });
+
+// ===================== CÔNG VIỆC =====================
+let cvDefaultDef = [
+  {id:1,ten:'Tìm nguồn hàng',pts:8},
+  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
+  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:4,ten:'Tạo website / app quản lý',pts:9},
+  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
+  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:7,ten:'Đăng bài / content MXH',pts:5},
+  {id:8,ten:'Rep khách hàng',pts:4},
+  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
+  {id:10,ten:'Giao hàng / ship',pts:4},
+  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvNextId = 100;
+
+function resetCV() {
+  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvNextId = 100;
+  renderCV();
+}
+function cvToggleWho(type,id,who) {
+  let arr = type=='def'?cvTasks.def:cvTasks.extra;
+  let t = arr.find(x=>x.id==id); if(!t) return;
+  if(t.who==who) t.who=null;
+  else if(t.who&&t.who!=who) t.who='b';
+  else t.who=who;
+  renderCV();
+}
+function addCVExtra() {
+  let name = document.getElementById('cvNewName').value.trim();
+  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
+  if(!name) { alert('Nhập tên công việc!'); return; }
+  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
+  document.getElementById('cvNewName').value='';
+  document.getElementById('cvNewPts').value='5';
+  renderCV();
+}
+function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function calcCV() {
+  let s1=0,s2=0,tot=0;
+  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
+    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
+    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
+    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
+  });
+  return{s1,s2,tot};
+}
+function cvTaskRow(t,type) {
+  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
+  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
+  let badge = t.who
+    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
+    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
+  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
+  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
+    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
+    ${badge}
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
+      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
+    </div>
+    ${delBtn}
+  </div>`;
+}
+function renderCV() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let p2 = tot>0?Math.round(s2/tot*100):50;
+  let all = [...cvTasks.def,...cvTasks.extra];
+  let done = all.filter(t=>t.who).length;
+  let statsEl = document.getElementById('cvStats');
+  if(!statsEl) return;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
+  `;
+  document.getElementById('cvProgWrap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
+      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
+      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
+      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
+  `;
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
+    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
+    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
+  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
+  document.getElementById('cvResult').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
+        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
+        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
+      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
+    </div>
+  `;
+}
+function syncToTien() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let el1 = document.getElementById('tienPct1');
+  let el2 = document.getElementById('tienPct2');
+  if(el1) el1.value=p1;
+  if(el2) el2.value=100-p1;
+  showPage('tien');
+}
+
+// ===================== CHIA TIỀN =====================
+let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
+
+function syncTienPct(who) {
+  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
+  let other = who==1?2:1;
+  let otherEl = document.getElementById('tienPct'+other);
+  if(otherEl) otherEl.value = 100-v;
+  renderTienPage();
+}
+function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
+function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
+function renderTienChiList(who) {
+  return tienChi[who].map((c,i)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
+      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
+      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
+    </div>`).join('');
+}
+function renderTienPage() {
+  let p1El = document.getElementById('tienPct1');
+  let p2El = document.getElementById('tienPct2');
+  if(!p1El) return;
+  let p1 = parseInt(p1El.value)||50;
+  let p2 = parseInt(p2El.value)||50;
+  let warnEl = document.getElementById('tienPctWarn');
+  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
+  let p1pctEl = document.getElementById('tienP1pct');
+  let p2pctEl = document.getElementById('tienP2pct');
+  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
+  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
+  // Doanh thu từ đơn hoàn thành
+  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
+  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
+  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
+  let tongChi = t1+t2, loi = dt-tongChi;
+  let d1 = loi>0?Math.round(loi*p1/100):0;
+  let d2 = loi>0?Math.round(loi*p2/100):0;
+  let sumEl = document.getElementById('tienSummary');
+  if(sumEl) sumEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
+    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
+    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
+  `;
+  let chi1El = document.getElementById('tienChi1List');
+  let chi2El = document.getElementById('tienChi2List');
+  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
+  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
+  let p1rEl = document.getElementById('tienP1result');
+  let p2rEl = document.getElementById('tienP2result');
+  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
+  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
+  let bar1 = Math.round(p1/(p1+p2||1)*100);
+  let resEl = document.getElementById('tienResult');
+  if(resEl) resEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
+      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
+      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
+      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
+    </div>
+  `;
+}
 </script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
 function toggleSidebar() {
@@ -34,6 +244,216 @@ document.querySelectorAll('.nav-item').forEach(el => {
     }
   });
 });
+
+// ===================== CÔNG VIỆC =====================
+let cvDefaultDef = [
+  {id:1,ten:'Tìm nguồn hàng',pts:8},
+  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
+  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:4,ten:'Tạo website / app quản lý',pts:9},
+  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
+  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:7,ten:'Đăng bài / content MXH',pts:5},
+  {id:8,ten:'Rep khách hàng',pts:4},
+  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
+  {id:10,ten:'Giao hàng / ship',pts:4},
+  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvNextId = 100;
+
+function resetCV() {
+  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvNextId = 100;
+  renderCV();
+}
+function cvToggleWho(type,id,who) {
+  let arr = type=='def'?cvTasks.def:cvTasks.extra;
+  let t = arr.find(x=>x.id==id); if(!t) return;
+  if(t.who==who) t.who=null;
+  else if(t.who&&t.who!=who) t.who='b';
+  else t.who=who;
+  renderCV();
+}
+function addCVExtra() {
+  let name = document.getElementById('cvNewName').value.trim();
+  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
+  if(!name) { alert('Nhập tên công việc!'); return; }
+  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
+  document.getElementById('cvNewName').value='';
+  document.getElementById('cvNewPts').value='5';
+  renderCV();
+}
+function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function calcCV() {
+  let s1=0,s2=0,tot=0;
+  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
+    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
+    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
+    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
+  });
+  return{s1,s2,tot};
+}
+function cvTaskRow(t,type) {
+  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
+  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
+  let badge = t.who
+    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
+    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
+  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
+  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
+    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
+    ${badge}
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
+      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
+    </div>
+    ${delBtn}
+  </div>`;
+}
+function renderCV() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let p2 = tot>0?Math.round(s2/tot*100):50;
+  let all = [...cvTasks.def,...cvTasks.extra];
+  let done = all.filter(t=>t.who).length;
+  let statsEl = document.getElementById('cvStats');
+  if(!statsEl) return;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
+  `;
+  document.getElementById('cvProgWrap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
+      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
+      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
+      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
+  `;
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
+    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
+    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
+  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
+  document.getElementById('cvResult').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
+        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
+        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
+      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
+    </div>
+  `;
+}
+function syncToTien() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let el1 = document.getElementById('tienPct1');
+  let el2 = document.getElementById('tienPct2');
+  if(el1) el1.value=p1;
+  if(el2) el2.value=100-p1;
+  showPage('tien');
+}
+
+// ===================== CHIA TIỀN =====================
+let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
+
+function syncTienPct(who) {
+  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
+  let other = who==1?2:1;
+  let otherEl = document.getElementById('tienPct'+other);
+  if(otherEl) otherEl.value = 100-v;
+  renderTienPage();
+}
+function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
+function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
+function renderTienChiList(who) {
+  return tienChi[who].map((c,i)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
+      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
+      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
+    </div>`).join('');
+}
+function renderTienPage() {
+  let p1El = document.getElementById('tienPct1');
+  let p2El = document.getElementById('tienPct2');
+  if(!p1El) return;
+  let p1 = parseInt(p1El.value)||50;
+  let p2 = parseInt(p2El.value)||50;
+  let warnEl = document.getElementById('tienPctWarn');
+  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
+  let p1pctEl = document.getElementById('tienP1pct');
+  let p2pctEl = document.getElementById('tienP2pct');
+  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
+  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
+  // Doanh thu từ đơn hoàn thành
+  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
+  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
+  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
+  let tongChi = t1+t2, loi = dt-tongChi;
+  let d1 = loi>0?Math.round(loi*p1/100):0;
+  let d2 = loi>0?Math.round(loi*p2/100):0;
+  let sumEl = document.getElementById('tienSummary');
+  if(sumEl) sumEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
+    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
+    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
+  `;
+  let chi1El = document.getElementById('tienChi1List');
+  let chi2El = document.getElementById('tienChi2List');
+  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
+  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
+  let p1rEl = document.getElementById('tienP1result');
+  let p2rEl = document.getElementById('tienP2result');
+  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
+  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
+  let bar1 = Math.round(p1/(p1+p2||1)*100);
+  let resEl = document.getElementById('tienResult');
+  if(resEl) resEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
+      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
+      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
+      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
+    </div>
+  `;
+}
 </script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
 function toggleSidebar() {
@@ -49,6 +469,216 @@ document.querySelectorAll('.nav-item').forEach(el => {
     }
   });
 });
+
+// ===================== CÔNG VIỆC =====================
+let cvDefaultDef = [
+  {id:1,ten:'Tìm nguồn hàng',pts:8},
+  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
+  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:4,ten:'Tạo website / app quản lý',pts:9},
+  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
+  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:7,ten:'Đăng bài / content MXH',pts:5},
+  {id:8,ten:'Rep khách hàng',pts:4},
+  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
+  {id:10,ten:'Giao hàng / ship',pts:4},
+  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvNextId = 100;
+
+function resetCV() {
+  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvNextId = 100;
+  renderCV();
+}
+function cvToggleWho(type,id,who) {
+  let arr = type=='def'?cvTasks.def:cvTasks.extra;
+  let t = arr.find(x=>x.id==id); if(!t) return;
+  if(t.who==who) t.who=null;
+  else if(t.who&&t.who!=who) t.who='b';
+  else t.who=who;
+  renderCV();
+}
+function addCVExtra() {
+  let name = document.getElementById('cvNewName').value.trim();
+  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
+  if(!name) { alert('Nhập tên công việc!'); return; }
+  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
+  document.getElementById('cvNewName').value='';
+  document.getElementById('cvNewPts').value='5';
+  renderCV();
+}
+function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function calcCV() {
+  let s1=0,s2=0,tot=0;
+  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
+    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
+    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
+    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
+  });
+  return{s1,s2,tot};
+}
+function cvTaskRow(t,type) {
+  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
+  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
+  let badge = t.who
+    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
+    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
+  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
+  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
+    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
+    ${badge}
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
+      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
+    </div>
+    ${delBtn}
+  </div>`;
+}
+function renderCV() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let p2 = tot>0?Math.round(s2/tot*100):50;
+  let all = [...cvTasks.def,...cvTasks.extra];
+  let done = all.filter(t=>t.who).length;
+  let statsEl = document.getElementById('cvStats');
+  if(!statsEl) return;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
+  `;
+  document.getElementById('cvProgWrap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
+      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
+      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
+      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
+  `;
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
+    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
+    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
+  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
+  document.getElementById('cvResult').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
+        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
+        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
+      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
+    </div>
+  `;
+}
+function syncToTien() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let el1 = document.getElementById('tienPct1');
+  let el2 = document.getElementById('tienPct2');
+  if(el1) el1.value=p1;
+  if(el2) el2.value=100-p1;
+  showPage('tien');
+}
+
+// ===================== CHIA TIỀN =====================
+let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
+
+function syncTienPct(who) {
+  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
+  let other = who==1?2:1;
+  let otherEl = document.getElementById('tienPct'+other);
+  if(otherEl) otherEl.value = 100-v;
+  renderTienPage();
+}
+function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
+function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
+function renderTienChiList(who) {
+  return tienChi[who].map((c,i)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
+      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
+      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
+    </div>`).join('');
+}
+function renderTienPage() {
+  let p1El = document.getElementById('tienPct1');
+  let p2El = document.getElementById('tienPct2');
+  if(!p1El) return;
+  let p1 = parseInt(p1El.value)||50;
+  let p2 = parseInt(p2El.value)||50;
+  let warnEl = document.getElementById('tienPctWarn');
+  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
+  let p1pctEl = document.getElementById('tienP1pct');
+  let p2pctEl = document.getElementById('tienP2pct');
+  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
+  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
+  // Doanh thu từ đơn hoàn thành
+  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
+  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
+  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
+  let tongChi = t1+t2, loi = dt-tongChi;
+  let d1 = loi>0?Math.round(loi*p1/100):0;
+  let d2 = loi>0?Math.round(loi*p2/100):0;
+  let sumEl = document.getElementById('tienSummary');
+  if(sumEl) sumEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
+    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
+    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
+  `;
+  let chi1El = document.getElementById('tienChi1List');
+  let chi2El = document.getElementById('tienChi2List');
+  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
+  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
+  let p1rEl = document.getElementById('tienP1result');
+  let p2rEl = document.getElementById('tienP2result');
+  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
+  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
+  let bar1 = Math.round(p1/(p1+p2||1)*100);
+  let resEl = document.getElementById('tienResult');
+  if(resEl) resEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
+      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
+      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
+      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
+    </div>
+  `;
+}
 </script>
 <style>
 :root{--bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--border:#e2e0d8;--text:#1a1916;--text2:#6b6960;--text3:#9c9a90;--green:#2d6a4f;--green-bg:#d8f3dc;--amber:#92400e;--amber-bg:#fef3c7;--blue:#1e40af;--blue-bg:#dbeafe;--red:#991b1b;--red-bg:#fee2e2;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);--shadow-md:0 4px 12px rgba(0,0,0,0.08);}
@@ -177,6 +807,15 @@ tbody tr:hover td{background:var(--surface2);}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Khách hàng
       </button>
+      <div class="nav-section">Cộng tác</div>
+      <button class="nav-item" onclick="showPage('cv')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
+        Công việc
+      </button>
+      <button class="nav-item" onclick="showPage('tien')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Chia tiền
+      </button>
       <div class="nav-section">Dữ liệu</div>
       <button class="nav-item" onclick="exportExcel()">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -236,6 +875,92 @@ tbody tr:hover td{background:var(--surface2);}
         <tbody id="khBody"><tr><td colspan="7" class="loading">Đang kết nối...</td></tr></tbody></table>
       </div></div>
     </div>
+  <!-- PAGE CÔNG VIỆC -->
+  <div class="page" id="page-cv">
+    <div class="page-header">
+      <div><div class="page-title">Công việc</div><div class="page-sub">Thống kê đóng góp theo đợt</div></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <input id="dotName" value="Đợt 1 — Khởi động shop" style="flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);font-weight:500;">
+      <button class="btn" style="color:var(--green);border-color:#86efac;background:var(--green-bg);font-size:12px;" onclick="syncToTien()">↗ Áp % sang Chia tiền</button>
+      <button class="btn" style="background:var(--red-bg);border-color:#fca5a5;color:var(--red);font-size:12px;" onclick="resetCV()">↺ Reset đợt</button>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:8px 14px;font-size:12px;color:#1d4ed8;margin-bottom:14px;">
+      💡 Nhấn tên để tick — nhấn lại để bỏ — nhấn cả 2 nếu cùng làm
+    </div>
+    <div class="stats-grid" id="cvStats"></div>
+    <div style="margin-bottom:1.25rem;" id="cvProgWrap"></div>
+    <div class="tbl-card" style="margin-bottom:12px;">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);">
+        <span style="font-size:13px;font-weight:600;">📌 Công việc mặc định</span>
+        <span style="font-size:12px;color:var(--text3)">Nhấn tên để tick</span>
+      </div>
+      <div id="cvDefList"></div>
+    </div>
+    <div class="tbl-card" style="margin-bottom:12px;">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);">
+        <span style="font-size:13px;font-weight:600;">⚡ Công việc phát sinh</span>
+        <span id="cvExtraCount" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div id="cvExtraList"></div>
+      <div style="display:flex;gap:8px;padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);">
+        <input id="cvNewName" placeholder="Tên công việc mới..." style="flex:1;padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;">
+        <input id="cvNewPts" type="number" value="5" min="1" max="10" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" placeholder="Điểm">
+        <button class="btn" style="background:var(--green);border-color:var(--green);color:#fff;font-size:12px;" onclick="addCVExtra()">+ Thêm</button>
+      </div>
+    </div>
+    <div class="tbl-card">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:13px;font-weight:600;">🏆 Kết quả đóng góp</div>
+      <div style="padding:16px;" id="cvResult"></div>
+    </div>
+  </div>
+
+  <!-- PAGE CHIA TIỀN -->
+  <div class="page" id="page-tien">
+    <div class="page-header">
+      <div><div class="page-title">Chia tiền</div><div class="page-sub">Quản lý chi phí và lợi nhuận chung</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;" id="tienSummary"></div>
+    <div class="tbl-card" style="margin-bottom:12px;padding:14px 18px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;">⚙️ Tỷ lệ chia lợi nhuận</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:13px;color:var(--text2)">Phương:</label>
+        <input id="tienPct1" type="number" value="50" min="0" max="100" style="width:65px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" oninput="syncTienPct(1)">
+        <span>%</span>
+        <span style="color:var(--border);margin:0 4px">|</span>
+        <label style="font-size:13px;color:var(--text2)">Nhi:</label>
+        <input id="tienPct2" type="number" value="50" min="0" max="100" style="width:65px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" oninput="syncTienPct(2)">
+        <span>%</span>
+        <span id="tienPctWarn" style="font-size:12px;color:var(--red);margin-left:8px;"></span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">💡 Hoặc tick công việc → nhấn "↗ Áp %" để tự động điền</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="tbl-card" style="padding:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#dbeafe;color:#1e40af;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">PH</div>
+          <div><div style="font-weight:600;font-size:14px;">Phương</div><div style="font-size:12px;color:var(--text2);" id="tienP1pct"></div></div>
+        </div>
+        <div id="tienChi1List"></div>
+        <button class="btn" style="margin-top:8px;font-size:11px;padding:4px 10px;" onclick="addTienChi(1)">+ Thêm khoản</button>
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:10px 12px;margin-top:10px;" id="tienP1result"></div>
+      </div>
+      <div class="tbl-card" style="padding:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#d8f3dc;color:#2d6a4f;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">NH</div>
+          <div><div style="font-weight:600;font-size:14px;">Nhi</div><div style="font-size:12px;color:var(--text2);" id="tienP2pct"></div></div>
+        </div>
+        <div id="tienChi2List"></div>
+        <button class="btn" style="margin-top:8px;font-size:11px;padding:4px 10px;" onclick="addTienChi(2)">+ Thêm khoản</button>
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:10px 12px;margin-top:10px;" id="tienP2result"></div>
+      </div>
+    </div>
+    <div class="tbl-card">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:13px;font-weight:600;">📊 Kết quả chia tiền</div>
+      <div style="padding:16px;" id="tienResult"></div>
+    </div>
+  </div>
+
   </main>
 </div>
 
@@ -316,8 +1041,10 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
-  let map = {dashboard:0, don:1, kho:2, kh:3};
+  let map = {dashboard:0, don:1, kho:2, kh:3, cv:4, tien:5};
   document.querySelectorAll('.nav-item')[map[p]].classList.add('active');
+  if (p=='cv') { renderCV(); return; }
+  if (p=='tien') { renderTienPage(); return; }
   if (!ready) return;
   if (p=='dashboard') renderDash();
   if (p=='don') renderDon();
@@ -614,6 +1341,216 @@ document.querySelectorAll('.nav-item').forEach(el => {
     }
   });
 });
+
+// ===================== CÔNG VIỆC =====================
+let cvDefaultDef = [
+  {id:1,ten:'Tìm nguồn hàng',pts:8},
+  {id:2,ten:'Đàm phán / liên hệ nhà cung cấp',pts:7},
+  {id:3,ten:'Chuyển hàng về Việt Nam',pts:9},
+  {id:4,ten:'Tạo website / app quản lý',pts:9},
+  {id:5,ten:'Tạo tài khoản mạng xã hội',pts:5},
+  {id:6,ten:'Chụp ảnh sản phẩm',pts:6},
+  {id:7,ten:'Đăng bài / content MXH',pts:5},
+  {id:8,ten:'Rep khách hàng',pts:4},
+  {id:9,ten:'Đóng gói đơn lẻ',pts:4},
+  {id:10,ten:'Giao hàng / ship',pts:4},
+  {id:11,ten:'Quản lý đơn & kho hàng',pts:5},
+];
+let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+let cvNextId = 100;
+
+function resetCV() {
+  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
+  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: []};
+  cvNextId = 100;
+  renderCV();
+}
+function cvToggleWho(type,id,who) {
+  let arr = type=='def'?cvTasks.def:cvTasks.extra;
+  let t = arr.find(x=>x.id==id); if(!t) return;
+  if(t.who==who) t.who=null;
+  else if(t.who&&t.who!=who) t.who='b';
+  else t.who=who;
+  renderCV();
+}
+function addCVExtra() {
+  let name = document.getElementById('cvNewName').value.trim();
+  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
+  if(!name) { alert('Nhập tên công việc!'); return; }
+  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
+  document.getElementById('cvNewName').value='';
+  document.getElementById('cvNewPts').value='5';
+  renderCV();
+}
+function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
+function calcCV() {
+  let s1=0,s2=0,tot=0;
+  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
+    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
+    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
+    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
+  });
+  return{s1,s2,tot};
+}
+function cvTaskRow(t,type) {
+  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
+  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
+  let badge = t.who
+    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
+    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
+  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
+  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
+  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
+    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
+    ${badge}
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
+      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
+    </div>
+    ${delBtn}
+  </div>`;
+}
+function renderCV() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let p2 = tot>0?Math.round(s2/tot*100):50;
+  let all = [...cvTasks.def,...cvTasks.extra];
+  let done = all.filter(t=>t.who).length;
+  let statsEl = document.getElementById('cvStats');
+  if(!statsEl) return;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
+  `;
+  document.getElementById('cvProgWrap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
+      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
+      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
+      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
+  `;
+  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('');
+  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
+    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
+    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
+  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
+  document.getElementById('cvResult').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
+        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
+        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
+        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
+      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
+    </div>
+  `;
+}
+function syncToTien() {
+  let {s1,s2,tot} = calcCV();
+  let p1 = tot>0?Math.round(s1/tot*100):50;
+  let el1 = document.getElementById('tienPct1');
+  let el2 = document.getElementById('tienPct2');
+  if(el1) el1.value=p1;
+  if(el2) el2.value=100-p1;
+  showPage('tien');
+}
+
+// ===================== CHIA TIỀN =====================
+let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
+
+function syncTienPct(who) {
+  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
+  let other = who==1?2:1;
+  let otherEl = document.getElementById('tienPct'+other);
+  if(otherEl) otherEl.value = 100-v;
+  renderTienPage();
+}
+function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
+function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
+function renderTienChiList(who) {
+  return tienChi[who].map((c,i)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
+      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
+      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
+    </div>`).join('');
+}
+function renderTienPage() {
+  let p1El = document.getElementById('tienPct1');
+  let p2El = document.getElementById('tienPct2');
+  if(!p1El) return;
+  let p1 = parseInt(p1El.value)||50;
+  let p2 = parseInt(p2El.value)||50;
+  let warnEl = document.getElementById('tienPctWarn');
+  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
+  let p1pctEl = document.getElementById('tienP1pct');
+  let p2pctEl = document.getElementById('tienP2pct');
+  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
+  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
+  // Doanh thu từ đơn hoàn thành
+  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
+  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
+  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
+  let tongChi = t1+t2, loi = dt-tongChi;
+  let d1 = loi>0?Math.round(loi*p1/100):0;
+  let d2 = loi>0?Math.round(loi*p2/100):0;
+  let sumEl = document.getElementById('tienSummary');
+  if(sumEl) sumEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
+    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
+    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
+  `;
+  let chi1El = document.getElementById('tienChi1List');
+  let chi2El = document.getElementById('tienChi2List');
+  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
+  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
+  let p1rEl = document.getElementById('tienP1result');
+  let p2rEl = document.getElementById('tienP2result');
+  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
+  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
+  let bar1 = Math.round(p1/(p1+p2||1)*100);
+  let resEl = document.getElementById('tienResult');
+  if(resEl) resEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
+      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
+    </div>
+    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
+      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
+      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
+        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
+        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
+      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
+    </div>
+  `;
+}
 </script>
 </body>
 </html>
