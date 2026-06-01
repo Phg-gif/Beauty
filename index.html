@@ -3,813 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản Lý Khách Hàng</title>
+<title>QL Khách Hàng — Beauty Corner</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
-}
-// Close sidebar when nav item clicked on mobile
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    if (window.innerWidth <= 700) {
-      document.querySelector('.sidebar').classList.remove('open');
-      document.getElementById('sidebarOverlay').classList.remove('show');
-    }
-  });
-});
-
-// ===================== CÔNG VIỆC =====================
-let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:9},
-  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:3,ten:'Tạo website / app quản lý',pts:9},
-  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
-  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
-  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
-  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
-];
-let cvQtyDef = [
-  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
-  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
-];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-let cvNextId = 100;
-
-function resetCV() {
-  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-  cvNextId = 100;
-  renderCV();
-}
-function cvToggleWho(type,id,who) {
-  let arr = type=='def'?cvTasks.def:cvTasks.extra;
-  let t = arr.find(x=>x.id==id); if(!t) return;
-  if(t.who==who) t.who=null;
-  else if(t.who&&t.who!=who) t.who='b';
-  else t.who=who;
-  renderCV();
-}
-function addCVExtra() {
-  let name = document.getElementById('cvNewName').value.trim();
-  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
-  if(!name) { alert('Nhập tên công việc!'); return; }
-  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
-  document.getElementById('cvNewName').value='';
-  document.getElementById('cvNewPts').value='5';
-  renderCV();
-}
-function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
-function updateCVQty(id,who,val){
-  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
-  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
-  else t.q2=Math.max(0,parseInt(val)||0);
-  renderCV();
-}
-function cvQtyRow(t){
-  let pts1=(t.q1*t.pts).toFixed(1);
-  let pts2=(t.q2*t.pts).toFixed(1);
-  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
-    <div style="flex:1;">
-      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
-    </div>
-    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
-    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
-      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
-      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
-    </div>
-  </div>`;
-}
-function calcCV() {
-  let s1=0,s2=0,tot=0;
-  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
-    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
-    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
-    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
-  });
-  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
-  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
-}
-function cvTaskRow(t,type) {
-  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
-  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
-  let badge = t.who
-    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
-    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
-  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
-  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
-    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
-    ${badge}
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
-      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
-    </div>
-    ${delBtn}
-  </div>`;
-}
-function renderCV() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let p2 = tot>0?Math.round(s2/tot*100):50;
-  let all = [...cvTasks.def,...cvTasks.extra];
-  let done = all.filter(t=>t.who).length;
-  let statsEl = document.getElementById('cvStats');
-  if(!statsEl) return;
-  statsEl.innerHTML = `
-    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
-  `;
-  document.getElementById('cvProgWrap').innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
-      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
-      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
-      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
-    </div>
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
-  `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
-  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
-    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
-    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
-  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
-  document.getElementById('cvResult').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
-        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
-        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
-      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
-    </div>
-  `;
-}
-function syncToTien() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let el1 = document.getElementById('tienPct1');
-  let el2 = document.getElementById('tienPct2');
-  if(el1) el1.value=p1;
-  if(el2) el2.value=100-p1;
-  showPage('tien');
-}
-
-// ===================== CHIA TIỀN =====================
-let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
-
-function syncTienPct(who) {
-  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
-  let other = who==1?2:1;
-  let otherEl = document.getElementById('tienPct'+other);
-  if(otherEl) otherEl.value = 100-v;
-  renderTienPage();
-}
-function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
-function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
-function renderTienChiList(who) {
-  return tienChi[who].map((c,i)=>`
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
-      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
-      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
-    </div>`).join('');
-}
-function renderTienPage() {
-  let p1El = document.getElementById('tienPct1');
-  let p2El = document.getElementById('tienPct2');
-  if(!p1El) return;
-  let p1 = parseInt(p1El.value)||50;
-  let p2 = parseInt(p2El.value)||50;
-  let warnEl = document.getElementById('tienPctWarn');
-  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
-  let p1pctEl = document.getElementById('tienP1pct');
-  let p2pctEl = document.getElementById('tienP2pct');
-  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
-  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
-  // Doanh thu từ đơn hoàn thành
-  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
-  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
-  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
-  let tongChi = t1+t2, loi = dt-tongChi;
-  let d1 = loi>0?Math.round(loi*p1/100):0;
-  let d2 = loi>0?Math.round(loi*p2/100):0;
-  let sumEl = document.getElementById('tienSummary');
-  if(sumEl) sumEl.innerHTML=`
-    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
-    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
-    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
-  `;
-  let chi1El = document.getElementById('tienChi1List');
-  let chi2El = document.getElementById('tienChi2List');
-  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
-  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
-  let p1rEl = document.getElementById('tienP1result');
-  let p2rEl = document.getElementById('tienP2result');
-  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
-  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
-  let bar1 = Math.round(p1/(p1+p2||1)*100);
-  let resEl = document.getElementById('tienResult');
-  if(resEl) resEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
-      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
-      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
-      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
-      </div>
-    </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
-      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
-    </div>
-  `;
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
-}
-// Close sidebar when nav item clicked on mobile
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    if (window.innerWidth <= 700) {
-      document.querySelector('.sidebar').classList.remove('open');
-      document.getElementById('sidebarOverlay').classList.remove('show');
-    }
-  });
-});
-
-// ===================== CÔNG VIỆC =====================
-let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:9},
-  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:3,ten:'Tạo website / app quản lý',pts:9},
-  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
-  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
-  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
-  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
-];
-let cvQtyDef = [
-  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
-  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
-];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-let cvNextId = 100;
-
-function resetCV() {
-  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-  cvNextId = 100;
-  renderCV();
-}
-function cvToggleWho(type,id,who) {
-  let arr = type=='def'?cvTasks.def:cvTasks.extra;
-  let t = arr.find(x=>x.id==id); if(!t) return;
-  if(t.who==who) t.who=null;
-  else if(t.who&&t.who!=who) t.who='b';
-  else t.who=who;
-  renderCV();
-}
-function addCVExtra() {
-  let name = document.getElementById('cvNewName').value.trim();
-  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
-  if(!name) { alert('Nhập tên công việc!'); return; }
-  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
-  document.getElementById('cvNewName').value='';
-  document.getElementById('cvNewPts').value='5';
-  renderCV();
-}
-function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
-function updateCVQty(id,who,val){
-  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
-  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
-  else t.q2=Math.max(0,parseInt(val)||0);
-  renderCV();
-}
-function cvQtyRow(t){
-  let pts1=(t.q1*t.pts).toFixed(1);
-  let pts2=(t.q2*t.pts).toFixed(1);
-  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
-    <div style="flex:1;">
-      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
-    </div>
-    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
-    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
-      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
-      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
-    </div>
-  </div>`;
-}
-function calcCV() {
-  let s1=0,s2=0,tot=0;
-  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
-    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
-    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
-    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
-  });
-  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
-  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
-}
-function cvTaskRow(t,type) {
-  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
-  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
-  let badge = t.who
-    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
-    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
-  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
-  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
-    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
-    ${badge}
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
-      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
-    </div>
-    ${delBtn}
-  </div>`;
-}
-function renderCV() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let p2 = tot>0?Math.round(s2/tot*100):50;
-  let all = [...cvTasks.def,...cvTasks.extra];
-  let done = all.filter(t=>t.who).length;
-  let statsEl = document.getElementById('cvStats');
-  if(!statsEl) return;
-  statsEl.innerHTML = `
-    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
-  `;
-  document.getElementById('cvProgWrap').innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
-      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
-      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
-      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
-    </div>
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
-  `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
-  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
-    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
-    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
-  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
-  document.getElementById('cvResult').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
-        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
-        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
-      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
-    </div>
-  `;
-}
-function syncToTien() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let el1 = document.getElementById('tienPct1');
-  let el2 = document.getElementById('tienPct2');
-  if(el1) el1.value=p1;
-  if(el2) el2.value=100-p1;
-  showPage('tien');
-}
-
-// ===================== CHIA TIỀN =====================
-let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
-
-function syncTienPct(who) {
-  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
-  let other = who==1?2:1;
-  let otherEl = document.getElementById('tienPct'+other);
-  if(otherEl) otherEl.value = 100-v;
-  renderTienPage();
-}
-function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
-function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
-function renderTienChiList(who) {
-  return tienChi[who].map((c,i)=>`
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
-      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
-      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
-    </div>`).join('');
-}
-function renderTienPage() {
-  let p1El = document.getElementById('tienPct1');
-  let p2El = document.getElementById('tienPct2');
-  if(!p1El) return;
-  let p1 = parseInt(p1El.value)||50;
-  let p2 = parseInt(p2El.value)||50;
-  let warnEl = document.getElementById('tienPctWarn');
-  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
-  let p1pctEl = document.getElementById('tienP1pct');
-  let p2pctEl = document.getElementById('tienP2pct');
-  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
-  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
-  // Doanh thu từ đơn hoàn thành
-  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
-  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
-  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
-  let tongChi = t1+t2, loi = dt-tongChi;
-  let d1 = loi>0?Math.round(loi*p1/100):0;
-  let d2 = loi>0?Math.round(loi*p2/100):0;
-  let sumEl = document.getElementById('tienSummary');
-  if(sumEl) sumEl.innerHTML=`
-    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
-    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
-    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
-  `;
-  let chi1El = document.getElementById('tienChi1List');
-  let chi2El = document.getElementById('tienChi2List');
-  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
-  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
-  let p1rEl = document.getElementById('tienP1result');
-  let p2rEl = document.getElementById('tienP2result');
-  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
-  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
-  let bar1 = Math.round(p1/(p1+p2||1)*100);
-  let resEl = document.getElementById('tienResult');
-  if(resEl) resEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
-      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
-      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
-      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
-      </div>
-    </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
-      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
-    </div>
-  `;
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
-function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
-}
-// Close sidebar when nav item clicked on mobile
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    if (window.innerWidth <= 700) {
-      document.querySelector('.sidebar').classList.remove('open');
-      document.getElementById('sidebarOverlay').classList.remove('show');
-    }
-  });
-});
-
-// ===================== CÔNG VIỆC =====================
-let cvDefaultDef = [
-  {id:1,ten:'Tìm nguồn hàng',pts:9},
-  {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
-  {id:3,ten:'Tạo website / app quản lý',pts:9},
-  {id:4,ten:'Tạo tài khoản mạng xã hội',pts:9},
-  {id:5,ten:'Chụp ảnh sản phẩm',pts:6},
-  {id:6,ten:'Đóng gói đơn lẻ',pts:8},
-  {id:7,ten:'Giao hàng / ship lẻ',pts:7},
-  {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
-];
-let cvQtyDef = [
-  {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
-  {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
-];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-let cvNextId = 100;
-
-function resetCV() {
-  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-  cvNextId = 100;
-  renderCV();
-}
-function cvToggleWho(type,id,who) {
-  let arr = type=='def'?cvTasks.def:cvTasks.extra;
-  let t = arr.find(x=>x.id==id); if(!t) return;
-  if(t.who==who) t.who=null;
-  else if(t.who&&t.who!=who) t.who='b';
-  else t.who=who;
-  renderCV();
-}
-function addCVExtra() {
-  let name = document.getElementById('cvNewName').value.trim();
-  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
-  if(!name) { alert('Nhập tên công việc!'); return; }
-  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
-  document.getElementById('cvNewName').value='';
-  document.getElementById('cvNewPts').value='5';
-  renderCV();
-}
-function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
-function updateCVQty(id,who,val){
-  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
-  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
-  else t.q2=Math.max(0,parseInt(val)||0);
-  renderCV();
-}
-function cvQtyRow(t){
-  let pts1=(t.q1*t.pts).toFixed(1);
-  let pts2=(t.q2*t.pts).toFixed(1);
-  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
-    <div style="flex:1;">
-      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
-    </div>
-    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
-    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
-      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
-      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
-    </div>
-  </div>`;
-}
-function calcCV() {
-  let s1=0,s2=0,tot=0;
-  [...cvTasks.def,...cvTasks.extra].forEach(t=>{
-    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
-    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
-    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
-  });
-  (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
-  return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
-}
-function cvTaskRow(t,type) {
-  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
-  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
-  let badge = t.who
-    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
-    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
-  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
-  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
-    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
-    ${badge}
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
-      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
-    </div>
-    ${delBtn}
-  </div>`;
-}
-function renderCV() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let p2 = tot>0?Math.round(s2/tot*100):50;
-  let all = [...cvTasks.def,...cvTasks.extra];
-  let done = all.filter(t=>t.who).length;
-  let statsEl = document.getElementById('cvStats');
-  if(!statsEl) return;
-  statsEl.innerHTML = `
-    <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
-  `;
-  document.getElementById('cvProgWrap').innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
-      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
-      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
-      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
-    </div>
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
-  `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
-  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
-    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
-    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
-  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
-  document.getElementById('cvResult').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
-        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
-        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
-      💡 Nhấn <b>"↗ Áp % sang Chia tiền"</b> để dùng tỷ lệ này
-    </div>
-  `;
-}
-function syncToTien() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let el1 = document.getElementById('tienPct1');
-  let el2 = document.getElementById('tienPct2');
-  if(el1) el1.value=p1;
-  if(el2) el2.value=100-p1;
-  showPage('tien');
-}
-
-// ===================== CHIA TIỀN =====================
-let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
-
-function syncTienPct(who) {
-  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
-  let other = who==1?2:1;
-  let otherEl = document.getElementById('tienPct'+other);
-  if(otherEl) otherEl.value = 100-v;
-  renderTienPage();
-}
-function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
-function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
-function renderTienChiList(who) {
-  return tienChi[who].map((c,i)=>`
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
-      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
-      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
-    </div>`).join('');
-}
-function renderTienPage() {
-  let p1El = document.getElementById('tienPct1');
-  let p2El = document.getElementById('tienPct2');
-  if(!p1El) return;
-  let p1 = parseInt(p1El.value)||50;
-  let p2 = parseInt(p2El.value)||50;
-  let warnEl = document.getElementById('tienPctWarn');
-  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
-  let p1pctEl = document.getElementById('tienP1pct');
-  let p2pctEl = document.getElementById('tienP2pct');
-  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
-  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
-  // Doanh thu từ đơn hoàn thành
-  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
-  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
-  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
-  let tongChi = t1+t2, loi = dt-tongChi;
-  let d1 = loi>0?Math.round(loi*p1/100):0;
-  let d2 = loi>0?Math.round(loi*p2/100):0;
-  let sumEl = document.getElementById('tienSummary');
-  if(sumEl) sumEl.innerHTML=`
-    <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
-    <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
-    <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
-  `;
-  let chi1El = document.getElementById('tienChi1List');
-  let chi2El = document.getElementById('tienChi2List');
-  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
-  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
-  let p1rEl = document.getElementById('tienP1result');
-  let p2rEl = document.getElementById('tienP2result');
-  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
-  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
-  let bar1 = Math.round(p1/(p1+p2||1)*100);
-  let resEl = document.getElementById('tienResult');
-  if(resEl) resEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
-      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
-    </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
-      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
-      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
-      </div>
-    </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
-      ${fmt(dt)} − ${fmt(tongChi)} = Lợi nhuận <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${fmt(loi)}</b>
-    </div>
-  `;
-}
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--border:#e2e0d8;--text:#1a1916;--text2:#6b6960;--text3:#9c9a90;--green:#2d6a4f;--green-bg:#d8f3dc;--amber:#92400e;--amber-bg:#fef3c7;--blue:#1e40af;--blue-bg:#dbeafe;--red:#991b1b;--red-bg:#fee2e2;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);--shadow-md:0 4px 12px rgba(0,0,0,0.08);}
+:root{--bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--border:#e2e0d8;--text:#1a1916;--text2:#6b6960;--text3:#9c9a90;--green:#2d6a4f;--green-bg:#d8f3dc;--amber:#92400e;--amber-bg:#fef3c7;--blue:#1e40af;--blue-bg:#dbeafe;--red:#991b1b;--red-bg:#fee2e2;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
 .app-shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
 .sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
 .logo{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
 .logo-dot{width:8px;height:8px;background:var(--green);border-radius:50%;}
 .logo-sub{font-size:11px;color:var(--text3);margin-top:2px;}
 .nav{padding:12px 10px;flex:1;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;font-weight:400;transition:all 0.15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:inherit;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;font-weight:400;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:inherit;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:var(--green-bg);color:var(--green);font-weight:500;}
-.nav-section{font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;padding:12px 12px 4px;}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;padding:12px 12px 4px;}
 .sidebar-footer{padding:12px;border-top:1px solid var(--border);}
 .sync-badge{font-size:11px;border-radius:20px;padding:3px 10px;display:inline-block;margin-bottom:4px;font-weight:500;}
-.sync-badge.connecting{background:#fef3c7;color:#92400e;}
-.sync-badge.connected{background:var(--green-bg);color:var(--green);}
-.main{padding:24px 28px;}
+.sync-connecting{background:var(--amber-bg);color:var(--amber);}
+.sync-connected{background:var(--green-bg);color:var(--green);}
+.main{padding:24px 28px;overflow-y:auto;}
 .page{display:none;}.page.active{display:block;}
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
-.page-title{font-size:20px;font-weight:600;letter-spacing:-0.4px;}
+.page-title{font-size:20px;font-weight:600;letter-spacing:-.4px;}
 .page-sub{font-size:12px;color:var(--text3);margin-top:2px;}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow);}
-.stat-label{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:0.03em;text-transform:uppercase;margin-bottom:6px;}
-.stat-val{font-size:22px;font-weight:600;letter-spacing:-0.5px;}
-.stat-val.green{color:var(--green);}.stat-val.red{color:var(--red);}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;color:var(--text);transition:all 0.15s;white-space:nowrap;box-shadow:var(--shadow);}
-.btn:hover{background:var(--surface2);}.btn:active{transform:scale(0.98);}
-.btn-primary{background:var(--green);border-color:var(--green);color:#fff;}.btn-primary:hover{background:#235c42;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow);}
+.stat-label{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.03em;text-transform:uppercase;margin-bottom:5px;}
+.stat-val{font-size:20px;font-weight:600;letter-spacing:-.4px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;color:var(--text);transition:all .15s;white-space:nowrap;box-shadow:var(--shadow);}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff;}
+.btn-primary:hover{background:#235c42;}
 .btn-danger{background:var(--red-bg);border-color:#fca5a5;color:var(--red);}
+.btn-warn{background:#fff0f0;border-color:#fca5a5;color:var(--red);}
 .btn-sm{padding:5px 10px;font-size:12px;}
 .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
 .toolbar input,.toolbar select{font-size:13px;padding:7px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;}
-.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;}
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px;}
 .tbl-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
-th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:600;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
+th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 tbody tr:hover td{background:var(--surface2);}
@@ -823,15 +62,15 @@ tbody tr:hover td{background:var(--surface2);}
 .badge-ok{background:var(--green-bg);color:var(--green);}.badge-ok::before{background:var(--green);}
 .profit-pos{color:var(--green);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px;}
 .profit-neg{color:var(--red);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px;}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;width:500px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;width:500px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12);}
 .modal-title{font-size:16px;font-weight:600;margin-bottom:18px;}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
 .form-group{display:flex;flex-direction:column;gap:4px;}
 .form-group.full{grid-column:1/-1;}
-.form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;}
+.form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
 .form-input{padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;}
 .form-input:focus{outline:none;border-color:var(--green);}
 .form-select{padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;}
@@ -841,162 +80,180 @@ tbody tr:hover td{background:var(--surface2);}
 .item-row-price{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;min-width:80px;text-align:right;}
 .item-row-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px;}
 .item-row-del:hover{color:var(--red);}
-.von-info{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-top:8px;display:flex;gap:16px;}
-#toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:9999;display:none;box-shadow:var(--shadow-md);}
-.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;}
-.loading{text-align:center;padding:40px;color:var(--text3);}
-@media(max-width:700px){.app-shell{grid-template-columns:1fr;}.sidebar{display:none;}.main{padding:16px;}}
-::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
-
+.von-info{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-top:8px;}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:9999;display:none;box-shadow:var(--shadow);}
+.empty-state{text-align:center;padding:32px;color:var(--text3);font-size:13px;}
+.loading{text-align:center;padding:32px;color:var(--text3);}
+/* CV styles */
+.cv-task{border-bottom:1px solid var(--surface2);}
+.cv-task:last-child{border-bottom:none;}
+.cv-task-main{display:flex;align-items:center;gap:12px;padding:12px 18px 6px;}
+.cv-task-main:hover{background:var(--surface2);}
+.cv-task-name{flex:1;font-size:15px;color:var(--text);}
+.cv-task-pts{font-size:12px;color:var(--text2);white-space:nowrap;}
+.cv-task-badge{min-width:52px;text-align:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;}
+.cv-done{background:var(--green-bg);color:var(--green);}
+.cv-no{background:var(--amber-bg);color:var(--amber);}
+.cv-who-btn{min-width:68px;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;color:var(--text2);}
+.cv-who-btn:hover{background:var(--surface2);}
+.cv-w1{background:#e8f0fe;border-color:#b3c8fb;color:var(--blue);}
+.cv-w2{background:#e6f7ee;border-color:#86efac;color:var(--green);}
+.cv-wb{background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;}
+.cv-bonus{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;}
+.cv-early{background:var(--green-bg);color:var(--green);}
+.cv-ontime{background:var(--blue-bg);color:var(--blue);}
+.cv-late{background:var(--red-bg);color:var(--red);}
+.cv-task-dates{display:flex;gap:12px;padding:4px 18px 10px;flex-wrap:wrap;align-items:center;}
+.cv-task-dates label{font-size:11px;color:var(--text3);}
+.cv-task-dates input[type=date]{padding:3px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);}
+.cv-qty-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--surface2);background:#fafffe;}
+.cv-qty-row:hover{background:#f3fdf7;}
+.cv-qty-tag{font-size:11px;color:var(--green);background:var(--green-bg);border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;}
+.cv-qty-block{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:80px;}
+.cv-qty-input{width:65px;height:30px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;}
+.cv-qty-input:focus{outline:none;border-color:var(--green);}
+.prog-bar{height:10px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin:6px 0;}
+.prog-seg{height:100%;transition:width .4s;}
+/* Tien styles */
+.chi-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.chi-row input{padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;}
+.chi-row input:focus{outline:none;border-color:var(--green);}
+/* Mobile */
 .mobile-bar{display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;justify-content:space-between;}
-.mobile-bar .logo{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
-.mobile-bar .logo-dot{width:7px;height:7px;background:var(--green);border-radius:50%;}
 .hamburger{background:none;border:none;cursor:pointer;padding:4px;display:flex;flex-direction:column;gap:5px;}
 .hamburger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:299;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
 .sidebar-overlay.show{display:block;}
 @media(max-width:700px){
   .mobile-bar{display:flex;}
   .app-shell{grid-template-columns:1fr;}
-  .sidebar{position:fixed;left:-240px;top:0;height:100vh;z-index:300;transition:left 0.25s ease;width:230px;}
+  .sidebar{position:fixed;left:-240px;top:0;height:100vh;z-index:300;transition:left .25s;width:230px;}
   .sidebar.open{left:0;}
   .main{padding:70px 16px 16px;}
 }
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
 </style>
 </head>
 <body>
-
 <div class="mobile-bar">
-  <div class="logo"><span class="logo-dot"></span>QL Khách Hàng</div>
-  <button class="hamburger" onclick="toggleSidebar()">
-    <span></span><span></span><span></span>
-  </button>
+  <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;"><span style="width:7px;height:7px;background:var(--green);border-radius:50%;display:inline-block;"></span>QL Khách Hàng</div>
+  <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-<div class="app-shell">
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="logo"><span class="logo-dot"></span>QL Khách Hàng</div>
-      <div class="logo-sub">Beauty Corner</div>
-    </div>
-    <nav class="nav">
-      <div class="nav-section">Quản lý</div>
-      <button class="nav-item active" onclick="showPage('dashboard')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Tổng quan
-      </button>
-      <button class="nav-item" onclick="showPage('don')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        Đơn hàng
-      </button>
-      <button class="nav-item" onclick="showPage('kho')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0v10l-8 4m-8-4V7m16 0l-8 4m-8-4l8 4"/></svg>
-        Kho hàng
-      </button>
-      <button class="nav-item" onclick="showPage('kh')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        Khách hàng
-      </button>
-      <div class="nav-section">Cộng tác</div>
-      <button class="nav-item" onclick="showPage('cv')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
-        Công việc
-      </button>
-      <button class="nav-item" onclick="showPage('tien')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        Chia tiền
-      </button>
-      <div class="nav-section">Dữ liệu</div>
-      <button class="nav-item" onclick="exportExcel()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Xuất Excel
-      </button>
-    </nav>
-    <div class="sidebar-footer">
-      <div class="sync-badge connecting" id="syncBadge">⏳ Đang kết nối...</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="saveInfo"></div>
-    </div>
-  </aside>
 
-  <main class="main">
-    <div class="page active" id="page-dashboard">
-      <div class="page-header">
-        <div><div class="page-title">Tổng quan</div><div class="page-sub" id="dateInfo"></div></div>
-      </div>
-      <div class="stats-grid" id="statsGrid"><div class="loading">Đang kết nối Firebase...</div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dashTables"></div>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo"><span class="logo-dot"></span>QL Khách Hàng</div>
+    <div class="logo-sub">Beauty Corner</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Quản lý</div>
+    <button class="nav-item active" onclick="showPage('dashboard')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tổng quan</button>
+    <button class="nav-item" onclick="showPage('don')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Đơn hàng</button>
+    <button class="nav-item" onclick="showPage('kho')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0v10l-8 4m-8-4V7m16 0l-8 4m-8-4l8 4"/></svg>Kho hàng</button>
+    <button class="nav-item" onclick="showPage('kh')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Khách hàng</button>
+    <div class="nav-section">Cộng tác</div>
+    <button class="nav-item" onclick="showPage('cv')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>Công việc</button>
+    <button class="nav-item" onclick="showPage('tien')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Chia tiền</button>
+    <div class="nav-section">Dữ liệu</div>
+    <button class="nav-item" onclick="exportExcel()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Xuất Excel</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sync-badge sync-connecting" id="syncBadge">⏳ Đang kết nối...</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="saveInfo"></div>
+  </div>
+</aside>
+
+<main class="main">
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header"><div><div class="page-title">Tổng quan</div><div class="page-sub" id="dateInfo"></div></div></div>
+    <div class="stats-grid" id="statsGrid"><div class="loading">Đang kết nối...</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dashTables"></div>
+  </div>
+  <!-- ĐƠN HÀNG -->
+  <div class="page" id="page-don">
+    <div class="page-header">
+      <div><div class="page-title">Đơn hàng</div><div class="page-sub">Quản lý tất cả đơn đặt hàng</div></div>
+      <button class="btn btn-primary" onclick="openModalDon()">+ Thêm đơn</button>
     </div>
-    <div class="page" id="page-don">
-      <div class="page-header">
-        <div><div class="page-title">Đơn hàng</div><div class="page-sub">Quản lý tất cả đơn đặt hàng</div></div>
-        <button class="btn btn-primary" onclick="openModalDon()">+ Thêm đơn</button>
-      </div>
-      <div class="toolbar">
-        <input type="text" id="searchDon" placeholder="Tìm tên khách..." style="width:190px" oninput="renderDon()">
-        <select id="filterTT" onchange="renderDon()">
-          <option value="">Tất cả trạng thái</option>
-          <option value="coc">Chưa cọc</option>
-          <option value="dacoc">Đã cọc</option>
-          <option value="xong">Hoàn thành</option>
-        </select>
-      </div>
-      <div class="tbl-card"><div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>Khách hàng</th><th>Mặt hàng</th><th>SL</th><th>Tiền vốn</th><th>Giá bán</th><th>Lợi nhuận</th><th>Cọc</th><th>Trạng thái</th><th>Ngày</th><th></th></tr></thead>
-        <tbody id="donBody"><tr><td colspan="11" class="loading">Đang kết nối...</td></tr></tbody></table>
-      </div></div>
+    <div class="toolbar">
+      <input type="text" id="searchDon" placeholder="Tìm tên khách..." style="width:190px" oninput="renderDon()">
+      <select id="filterTT" onchange="renderDon()">
+        <option value="">Tất cả trạng thái</option>
+        <option value="coc">Chưa cọc</option>
+        <option value="dacoc">Đã cọc</option>
+        <option value="xong">Hoàn thành</option>
+      </select>
     </div>
-    <div class="page" id="page-kho">
-      <div class="page-header">
-        <div><div class="page-title">Kho hàng</div><div class="page-sub">Tồn kho và giá cả</div></div>
-        <button class="btn btn-primary" onclick="openModalKho()">+ Thêm hàng</button>
-      </div>
-      <div class="tbl-card"><div class="tbl-wrap">
-        <table><thead><tr><th>Mã</th><th>Tên hàng</th><th>Tổng tồn</th><th>Còn lại</th><th>Giá gốc</th><th>Giá sale</th><th>Giá bán</th><th>Tiết kiệm</th><th>Lời/cái</th><th>Tình trạng</th><th></th></tr></thead>
-        <tbody id="khoBody"><tr><td colspan="9" class="loading">Đang kết nối...</td></tr></tbody></table>
-      </div></div>
+    <div class="tbl-card"><div class="tbl-wrap">
+      <table><thead><tr><th>#</th><th>Khách hàng</th><th>Mặt hàng</th><th>SL</th><th>Tiền vốn</th><th>Giá bán</th><th>Lợi nhuận</th><th>Cọc</th><th>Trạng thái</th><th>Ngày</th><th></th></tr></thead>
+      <tbody id="donBody"><tr><td colspan="11" class="loading">Đang tải...</td></tr></tbody></table>
+    </div></div>
+  </div>
+  <!-- KHO HÀNG -->
+  <div class="page" id="page-kho">
+    <div class="page-header">
+      <div><div class="page-title">Kho hàng</div><div class="page-sub">Tồn kho và giá cả</div></div>
+      <button class="btn btn-primary" onclick="openModalKho()">+ Thêm hàng</button>
     </div>
-    <div class="page" id="page-kh">
-      <div class="page-header">
-        <div><div class="page-title">Khách hàng</div><div class="page-sub">Danh sách và lịch sử mua</div></div>
-        <button class="btn btn-primary" onclick="openModalKH()">+ Thêm khách</button>
-      </div>
-      <div class="tbl-card"><div class="tbl-wrap">
-        <table><thead><tr><th>Tên khách</th><th>SĐT</th><th>Địa chỉ</th><th>Tổng đơn</th><th>Tổng chi tiêu</th><th>Ghi chú</th><th></th></tr></thead>
-        <tbody id="khBody"><tr><td colspan="7" class="loading">Đang kết nối...</td></tr></tbody></table>
-      </div></div>
+    <div class="tbl-card"><div class="tbl-wrap">
+      <table><thead><tr><th>Mã</th><th>Tên hàng</th><th>Tổng tồn</th><th>Đang đặt</th><th>Còn lại</th><th>Giá gốc</th><th>Giá sale</th><th>Giá bán</th><th>Lời/cái</th><th>Tình trạng</th><th></th></tr></thead>
+      <tbody id="khoBody"><tr><td colspan="11" class="loading">Đang tải...</td></tr></tbody></table>
+    </div></div>
+  </div>
+  <!-- KHÁCH HÀNG -->
+  <div class="page" id="page-kh">
+    <div class="page-header">
+      <div><div class="page-title">Khách hàng</div><div class="page-sub">Danh sách và lịch sử mua</div></div>
+      <button class="btn btn-primary" onclick="openModalKH()">+ Thêm khách</button>
     </div>
-  <!-- PAGE CÔNG VIỆC -->
+    <div class="tbl-card"><div class="tbl-wrap">
+      <table><thead><tr><th>Tên khách</th><th>SĐT</th><th>Địa chỉ</th><th>Tổng đơn</th><th>Tổng chi tiêu</th><th>Ghi chú</th><th></th></tr></thead>
+      <tbody id="khBody"><tr><td colspan="7" class="loading">Đang tải...</td></tr></tbody></table>
+    </div></div>
+  </div>
+  <!-- CÔNG VIỆC -->
   <div class="page" id="page-cv">
     <div class="page-header">
       <div><div class="page-title">Công việc</div><div class="page-sub">Thống kê đóng góp theo đợt</div></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
-      <input id="dotName" value="Đợt 1 — Khởi động shop" style="flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);font-weight:500;">
-      <button class="btn" style="color:var(--green);border-color:#86efac;background:var(--green-bg);font-size:12px;" onclick="syncToTien()">↗ Áp % sang Chia tiền</button>
-      <button class="btn" style="background:var(--red-bg);border-color:#fca5a5;color:var(--red);font-size:12px;" onclick="resetCV()">↺ Reset đợt</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+      <input id="dotName" value="Đợt 1 — Khởi động shop" style="flex:1;min-width:160px;padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);font-weight:500;">
+      <button class="btn btn-sm" style="color:var(--green);border-color:#86efac;background:var(--green-bg);" onclick="syncToTien()">↗ Áp % sang Chia tiền</button>
+      <button class="btn btn-sm btn-warn" onclick="resetCV()">↺ Reset đợt</button>
     </div>
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:8px 14px;font-size:12px;color:#1d4ed8;margin-bottom:14px;">
-      💡 Nhấn tên để tick — nhấn lại để bỏ — nhấn cả 2 nếu cùng làm
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:8px 14px;font-size:12px;color:var(--blue);margin-bottom:14px;">
+      💡 Nhấn tên để tick — nhấn lại để bỏ — nhấn cả 2 nếu cùng làm. Xong sớm +50% · Đúng hạn đủ điểm · Quá hạn -30%
     </div>
     <div class="stats-grid" id="cvStats"></div>
-    <div style="margin-bottom:1.25rem;" id="cvProgWrap"></div>
-    <div class="tbl-card" style="margin-bottom:12px;">
+    <div id="cvProgWrap" style="margin-bottom:14px;"></div>
+    <div class="tbl-card">
       <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);">
         <span style="font-size:13px;font-weight:600;">📌 Công việc cố định + linh hoạt</span>
-        <span style="font-size:12px;color:var(--text3)">Tick tên hoặc nhập số lượng</span>
+        <span style="font-size:12px;color:var(--text3);">Tick tên hoặc nhập số lượng</span>
       </div>
       <div id="cvDefList"></div>
     </div>
-    <div class="tbl-card" style="margin-bottom:12px;">
+    <div class="tbl-card">
       <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);">
         <span style="font-size:13px;font-weight:600;">⚡ Công việc phát sinh</span>
-        <span id="cvExtraCount" style="font-size:12px;color:var(--text3)"></span>
+        <span id="cvExtraCount" style="font-size:12px;color:var(--text3);"></span>
       </div>
       <div id="cvExtraList"></div>
       <div style="display:flex;gap:8px;padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);">
         <input id="cvNewName" placeholder="Tên công việc mới..." style="flex:1;padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;">
         <input id="cvNewPts" type="number" value="5" min="1" max="10" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" placeholder="Điểm">
-        <button class="btn" style="background:var(--green);border-color:var(--green);color:#fff;font-size:12px;" onclick="addCVExtra()">+ Thêm</button>
+        <button class="btn btn-primary btn-sm" onclick="addCVExtra()">+ Thêm</button>
       </div>
     </div>
     <div class="tbl-card">
@@ -1004,44 +261,41 @@ tbody tr:hover td{background:var(--surface2);}
       <div style="padding:16px;" id="cvResult"></div>
     </div>
   </div>
-
-  <!-- PAGE CHIA TIỀN -->
+  <!-- CHIA TIỀN -->
   <div class="page" id="page-tien">
-    <div class="page-header">
-      <div><div class="page-title">Chia tiền</div><div class="page-sub">Quản lý chi phí và lợi nhuận chung</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;" id="tienSummary"></div>
-    <div class="tbl-card" style="margin-bottom:12px;padding:14px 18px;">
+    <div class="page-header"><div><div class="page-title">Chia tiền</div><div class="page-sub">Quản lý chi phí và lợi nhuận chung</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;" id="tienSummary"></div>
+    <div class="tbl-card" style="padding:14px 18px;margin-bottom:12px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px;">⚙️ Tỷ lệ chia lợi nhuận</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <label style="font-size:13px;color:var(--text2)">Phương:</label>
+        <label style="font-size:13px;color:var(--text2);">Phương:</label>
         <input id="tienPct1" type="number" value="50" min="0" max="100" style="width:65px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" oninput="syncTienPct(1)">
         <span>%</span>
         <span style="color:var(--border);margin:0 4px">|</span>
-        <label style="font-size:13px;color:var(--text2)">Nhi:</label>
+        <label style="font-size:13px;color:var(--text2);">Nhi:</label>
         <input id="tienPct2" type="number" value="50" min="0" max="100" style="width:65px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;" oninput="syncTienPct(2)">
         <span>%</span>
         <span id="tienPctWarn" style="font-size:12px;color:var(--red);margin-left:8px;"></span>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px;">💡 Hoặc tick công việc → nhấn "↗ Áp %" để tự động điền</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">💡 Tick công việc → nhấn "↗ Áp %" để tự động điền theo đóng góp</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
       <div class="tbl-card" style="padding:14px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:36px;height:36px;border-radius:50%;background:#dbeafe;color:#1e40af;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">PH</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--blue-bg);color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">PH</div>
           <div><div style="font-weight:600;font-size:14px;">Phương</div><div style="font-size:12px;color:var(--text2);" id="tienP1pct"></div></div>
         </div>
         <div id="tienChi1List"></div>
-        <button class="btn" style="margin-top:8px;font-size:11px;padding:4px 10px;" onclick="addTienChi(1)">+ Thêm khoản</button>
+        <button class="btn btn-sm" onclick="addTienChi(1)" style="margin-top:8px;font-size:11px;">+ Thêm khoản</button>
         <div style="background:var(--surface2);border-radius:var(--radius);padding:10px 12px;margin-top:10px;" id="tienP1result"></div>
       </div>
       <div class="tbl-card" style="padding:14px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:36px;height:36px;border-radius:50%;background:#d8f3dc;color:#2d6a4f;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">NH</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;">NH</div>
           <div><div style="font-weight:600;font-size:14px;">Nhi</div><div style="font-size:12px;color:var(--text2);" id="tienP2pct"></div></div>
         </div>
         <div id="tienChi2List"></div>
-        <button class="btn" style="margin-top:8px;font-size:11px;padding:4px 10px;" onclick="addTienChi(2)">+ Thêm khoản</button>
+        <button class="btn btn-sm" onclick="addTienChi(2)" style="margin-top:8px;font-size:11px;">+ Thêm khoản</button>
         <div style="background:var(--surface2);border-radius:var(--radius);padding:10px 12px;margin-top:10px;" id="tienP2result"></div>
       </div>
     </div>
@@ -1050,147 +304,141 @@ tbody tr:hover td{background:var(--surface2);}
       <div style="padding:16px;" id="tienResult"></div>
     </div>
   </div>
-
-  </main>
+</main>
 </div>
 
-<div class="modal-overlay" id="modalOverlay" onclick="maybeClose(event)">
-  <div class="modal" id="modalBox"></div>
-</div>
+<div class="modal-overlay" id="modalOverlay" onclick="maybeClose(event)"><div class="modal" id="modalBox"></div></div>
 <div id="toast"></div>
 
 <script>
+// ===== FIREBASE =====
 firebase.initializeApp({
-  apiKey: "AIzaSyCfNr6LwZ2W_ETG7jANETsU1cjGz9fmWhM",
-  authDomain: "beauty-corner-25e37.firebaseapp.com",
-  databaseURL: "https://beauty-corner-25e37-default-rtdb.firebaseio.com",
-  projectId: "beauty-corner-25e37",
-  storageBucket: "beauty-corner-25e37.firebasestorage.app",
-  messagingSenderId: "996749445541",
-  appId: "1:996749445541:web:56b0616ef3e4f5056f804c"
+  apiKey:"AIzaSyCfNr6LwZ2W_ETG7jANETsU1cjGz9fmWhM",
+  authDomain:"beauty-corner-25e37.firebaseapp.com",
+  databaseURL:"https://beauty-corner-25e37-default-rtdb.firebaseio.com",
+  projectId:"beauty-corner-25e37",
+  storageBucket:"beauty-corner-25e37.firebasestorage.app",
+  messagingSenderId:"996749445541",
+  appId:"1:996749445541:web:56b0616ef3e4f5056f804c"
 });
-
 const db = firebase.database();
 const dataRef = db.ref('data');
-
-// Dữ liệu mặc định — đảm bảo không bao giờ undefined
-let S = {kho:[], don:[], khach:[], nD:1, nK:1, nKH:1};
+let S = null;
 let ready = false;
-let dItems = [];
 
-// Hàm đảm bảo S luôn có array, không bao giờ undefined
-function sanitize(val) {
+function sanitize(v){
   return {
-    kho:    Array.isArray(val.kho)    ? val.kho    : Object.values(val.kho    || {}),
-    don:    Array.isArray(val.don)    ? val.don    : Object.values(val.don    || {}),
-    khach:  Array.isArray(val.khach)  ? val.khach  : Object.values(val.khach  || {}),
-    nD: val.nD || 1,
-    nK: val.nK || 1,
-    nKH: val.nKH || 1,
+    kho: Array.isArray(v.kho)?v.kho:Object.values(v.kho||{}),
+    don: Array.isArray(v.don)?v.don:Object.values(v.don||{}),
+    khach: Array.isArray(v.khach)?v.khach:Object.values(v.khach||{}),
+    nD:v.nD||1, nK:v.nK||1, nKH:v.nKH||1
   };
 }
 
-dataRef.on('value', (snap) => {
+dataRef.on('value', snap => {
   const val = snap.val();
-  if (val) {
-    S = sanitize(val);
-  } else {
-    S = {kho:[], don:[], khach:[], nD:1, nK:1, nKH:1};
-    dataRef.set(S);
-  }
+  S = val ? sanitize(val) : {kho:[],don:[],khach:[],nD:1,nK:1,nKH:1};
+  if(!val) dataRef.set(S);
   ready = true;
   document.getElementById('syncBadge').textContent = '🟢 Đã đồng bộ';
-  document.getElementById('syncBadge').className = 'sync-badge connected';
-  document.getElementById('saveInfo').textContent = 'Cập nhật lúc ' + new Date().toLocaleTimeString('vi-VN');
+  document.getElementById('syncBadge').className = 'sync-badge sync-connected';
+  document.getElementById('saveInfo').textContent = 'Cập nhật lúc '+new Date().toLocaleTimeString('vi-VN');
   renderAll();
 });
 
-function saveDB() {
-  dataRef.set(S).then(() => showToast('✓ Đã lưu')).catch(e => showToast('Lỗi: ' + e.message));
+function saveDB(){
+  if(!S) return;
+  dataRef.set(S).then(()=>showToast('✓ Đã lưu')).catch(e=>showToast('Lỗi: '+e.message));
 }
 
-function showToast(msg) {
-  let t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
-  clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 2000);
+// ===== HELPERS =====
+function fmt(n){return Math.round(n||0).toLocaleString('vi-VN')+'đ';}
+function fmtN(n){return Math.round(n||0).toLocaleString('vi-VN');}
+function showToast(msg){
+  let t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2000);
 }
-function fmt(n) { return Math.round(n||0).toLocaleString('vi-VN') + 'đ'; }
-function fmtN(n) { return Math.round(n||0).toLocaleString('vi-VN'); }
-
-function recalc() {
-  S.kho.forEach(k => k.dat = 0);
-  S.don.forEach(d => {
-    if (d.tt != 'xong') (d.items||[]).forEach(it => {
-      let k = S.kho.find(k => k.id == it.spId);
-      if (k) k.dat = (k.dat||0) + it.sl;
-    });
-  });
+function maybeClose(e){if(e.target.id=='modalOverlay')closeModal();}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modalOverlay').classList.add('open');}
+function recalc(){
+  if(!S)return;
+  S.kho.forEach(k=>k.dat=0);
+  S.don.forEach(d=>{if(d.tt!='xong')(d.items||[]).forEach(it=>{let k=S.kho.find(k=>k.id==it.spId);if(k)k.dat=(k.dat||0)+it.sl;});});
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
 }
 
-function showPage(p) {
-  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('page-' + p).classList.add('active');
-  let map = {dashboard:0, don:1, kho:2, kh:3, cv:4, tien:5};
+// ===== NAVIGATION =====
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const map={dashboard:0,don:1,kho:2,kh:3,cv:4,tien:5,exportExcel:6};
   document.querySelectorAll('.nav-item')[map[p]].classList.add('active');
-  if (p=='cv') { renderCV(); return; }
-  if (p=='tien') { renderTienPage(); return; }
-  if (!ready) return;
-  if (p=='dashboard') renderDash();
-  if (p=='don') renderDon();
-  if (p=='kho') renderKho();
-  if (p=='kh') renderKH();
+  if(p==='cv'){renderCV();return;}
+  if(p==='tien'){renderTienPage();return;}
+  if(!ready)return;
+  if(p==='dashboard')renderDash();
+  if(p==='don')renderDon();
+  if(p==='kho')renderKho();
+  if(p==='kh')renderKH();
+}
+function renderAll(){
+  if(!ready)return;
   renderStats();
+  const active=['dashboard','don','kho','kh','cv','tien'].find(p=>document.getElementById('page-'+p)?.classList.contains('active'))||'dashboard';
+  if(active==='dashboard')renderDash();
+  else if(active==='don')renderDon();
+  else if(active==='kho')renderKho();
+  else if(active==='kh')renderKH();
+  else if(active==='cv')renderCV();
+  else if(active==='tien')renderTienPage();
 }
 
-function renderAll() {
-  if (!ready) return;
-  renderStats();
-  let pages = ['dashboard','don','kho','kh'];
-  let active = pages.find(p => document.getElementById('page-'+p).classList.contains('active')) || 'dashboard';
-  if (active=='dashboard') renderDash();
-  if (active=='don') renderDon();
-  if (active=='kho') renderKho();
-  if (active=='kh') renderKH();
-}
-
-function renderStats() {
+// ===== DASHBOARD =====
+function renderStats(){
   recalc();
-  let dt = S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0);
-  let loi = S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+((d.gia||0)-(d.von||0)),0);
-  let chua = S.don.filter(d=>d.tt!='xong').length;
-  let vonK = S.kho.reduce((s,k)=>s+(k.von||0)*((k.ton||0)-(k.dat||0)),0);
-  document.getElementById('statsGrid').innerHTML = `
+  const dt=S.don.filter(d=>d.tt==='xong').reduce((s,d)=>s+(d.gia||0),0);
+  const loi=S.don.filter(d=>d.tt==='xong').reduce((s,d)=>s+(d.gia||0)-(d.von||0),0);
+  const chua=S.don.filter(d=>d.tt!=='xong').length;
+  const vonK=S.kho.reduce((s,k)=>s+(k.von||0)*((k.ton||0)-(k.dat||0)),0);
+  document.getElementById('statsGrid').innerHTML=`
     <div class="stat"><div class="stat-label">Tổng đơn</div><div class="stat-val">${S.don.length}</div></div>
     <div class="stat"><div class="stat-label">Đang xử lý</div><div class="stat-val">${chua}</div></div>
-    <div class="stat"><div class="stat-label">Doanh thu</div><div class="stat-val green" style="font-size:17px">${fmt(dt)}</div></div>
-    <div class="stat"><div class="stat-label">Lợi nhuận</div><div class="stat-val ${loi>=0?'green':'red'}" style="font-size:17px">${fmt(loi)}</div></div>
+    <div class="stat"><div class="stat-label">Doanh thu</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
+    <div class="stat"><div class="stat-label">Lợi nhuận</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
     <div class="stat"><div class="stat-label">Giá trị kho</div><div class="stat-val" style="font-size:17px">${fmt(vonK)}</div></div>
     <div class="stat"><div class="stat-label">Khách hàng</div><div class="stat-val">${S.khach.length}</div></div>
   `;
 }
-
-function renderDash() {
+function renderDash(){
   recalc();
-  document.getElementById('dateInfo').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  let donMoi = S.don.filter(d=>d.tt!='xong').slice(-5).reverse();
-  let khoLow = S.kho.filter(k=>(k.ton-k.dat)<=5);
-  document.getElementById('dashTables').innerHTML = `
-    <div class="tbl-card"><div style="padding:14px 16px 10px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border)">Đơn đang xử lý</div>
+  document.getElementById('dateInfo').textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const donMoi=S.don.filter(d=>d.tt!=='xong').slice(-5).reverse();
+  const khoLow=S.kho.filter(k=>(k.ton||0)-(k.dat||0)<=5);
+  document.getElementById('dashTables').innerHTML=`
+    <div class="tbl-card"><div style="padding:13px 16px 10px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border)">Đơn đang xử lý</div>
     <table><tbody>${donMoi.length?donMoi.map(d=>`<tr><td style="font-weight:500">${d.kh}</td><td style="color:var(--text2)">${(d.items||[]).map(i=>i.ten).join(', ')}</td><td><span class="badge badge-${d.tt}">${{coc:'Chưa cọc',dacoc:'Đã cọc'}[d.tt]||d.tt}</span></td></tr>`).join(''):'<tr><td colspan="3" class="empty-state">Không có đơn đang xử lý</td></tr>'}</tbody></table></div>
-    <div class="tbl-card"><div style="padding:14px 16px 10px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border)">Hàng sắp hết</div>
-    <table><tbody>${khoLow.length?khoLow.map(k=>`<tr><td style="font-weight:500">${k.ten}</td><td class="mono">${fmtN(k.ton-k.dat)} còn</td><td><span class="badge badge-low">Sắp hết</span></td></tr>`).join(''):'<tr><td colspan="3" class="empty-state">Kho hàng đầy đủ</td></tr>'}</tbody></table></div>
+    <div class="tbl-card"><div style="padding:13px 16px 10px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border)">Hàng sắp hết</div>
+    <table><tbody>${khoLow.length?khoLow.map(k=>`<tr><td style="font-weight:500">${k.ten}</td><td class="mono">${fmtN((k.ton||0)-(k.dat||0))} còn</td><td><span class="badge badge-low">Sắp hết</span></td></tr>`).join(''):'<tr><td colspan="3" class="empty-state">Kho hàng đầy đủ</td></tr>'}</tbody></table></div>
   `;
 }
 
-function renderDon() {
+// ===== ĐƠN HÀNG =====
+let dItems=[];
+function renderDon(){
+  if(!S)return;
   recalc();
-  let q = (document.getElementById('searchDon').value||'').toLowerCase();
-  let f = document.getElementById('filterTT').value;
-  let rows = S.don.filter(d=>(!q||d.kh.toLowerCase().includes(q))&&(!f||d.tt==f));
-  let ttL = {coc:'Chưa cọc',dacoc:'Đã cọc',xong:'Hoàn thành'};
-  document.getElementById('donBody').innerHTML = rows.length ? rows.map((d,i)=>`<tr>
-    <td style="color:var(--text3)" class="mono">${i+1}</td>
+  const q=(document.getElementById('searchDon').value||'').toLowerCase();
+  const f=document.getElementById('filterTT').value;
+  const rows=S.don.filter(d=>(!q||d.kh.toLowerCase().includes(q))&&(!f||d.tt===f));
+  const ttL={coc:'Chưa cọc',dacoc:'Đã cọc',xong:'Hoàn thành'};
+  document.getElementById('donBody').innerHTML=rows.length?rows.map((d,i)=>`<tr>
+    <td class="mono" style="color:var(--text3)">${i+1}</td>
     <td><div style="font-weight:500">${d.kh}</div><div style="font-size:11px;color:var(--text3)">${d.sdt||''}</div></td>
     <td style="max-width:180px;color:var(--text2)">${(d.items||[]).map(it=>it.ten+'×'+it.sl).join(', ')}</td>
     <td class="mono">${(d.items||[]).reduce((s,it)=>s+it.sl,0)}</td>
@@ -1201,59 +449,17 @@ function renderDon() {
     <td><span class="badge badge-${d.tt}">${ttL[d.tt]}</span></td>
     <td style="color:var(--text3);font-size:12px;white-space:nowrap">${d.ngay}</td>
     <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editDon(${d.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delDon(${d.id})">🗑</button></td>
-  </tr>`).join('') : '<tr><td colspan="11" class="empty-state">Chưa có đơn hàng nào</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="11" class="empty-state">Chưa có đơn hàng nào</td></tr>';
 }
-
-function renderKho() {
+function openModalDon(id){
+  if(!ready){showToast('Đang kết nối...');return;}
+  const d=id?S.don.find(x=>x.id===id):null;
+  dItems=d?JSON.parse(JSON.stringify(d.items||[])):[];
   recalc();
-  document.getElementById('khoBody').innerHTML = S.kho.length ? S.kho.map(k=>{
-    let con = (k.ton||0)-(k.dat||0);
-    let tietKiem = (k.giaGoc||0)-(k.von||0);
-    let loiCai = (k.gia||0)-(k.von||0);
-    let pctSale = k.giaGoc>0 ? Math.round(tietKiem/k.giaGoc*100) : 0;
-    let pctLoi = k.von>0 ? Math.round(loiCai/k.von*100) : 0;
-    return `<tr>
-    <td class="mono" style="color:var(--text3)">${k.ma}</td>
-    <td style="font-weight:500">${k.ten}</td>
-    <td class="mono">${fmtN(k.ton)}</td>
-    <td class="mono" style="font-weight:600;color:${con<=5?'var(--red)':'var(--green)'}">${fmtN(con)}</td>
-    <td class="mono" style="color:var(--text2)">${k.giaGoc?fmt(k.giaGoc):'—'}</td>
-    <td class="mono" style="color:var(--amber)">${fmt(k.von)} ${pctSale>0?'<span style="font-size:10px;color:#27500A">(-'+pctSale+'%)</span>':''}</td>
-    <td class="mono" style="font-weight:500">${fmt(k.gia)}</td>
-    <td class="mono" style="color:#27500A">${tietKiem>0?fmt(tietKiem):'—'}</td>
-    <td class="mono ${loiCai>=0?'profit-pos':'profit-neg'}">${loiCai>=0?'+':''}${fmt(loiCai)} <span style="font-size:10px">(${pctLoi}%)</span></td>
-    <td><span class="badge ${con<=5?'badge-low':'badge-ok'}">${con<=5?'Sắp hết':'Còn hàng'}</span></td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editKho(${k.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delKho(${k.id})">🗑</button></td></tr>`;
-  }).join('') : '<tr><td colspan="11" class="empty-state">Chưa có sản phẩm</td></tr>';
-}
-
-function renderKH() {
-  document.getElementById('khBody').innerHTML = S.khach.length ? S.khach.map(k=>{
-    let ds = S.don.filter(d=>d.kh==k.ten);
-    return `<tr><td style="font-weight:500">${k.ten}</td><td class="mono">${k.sdt||'—'}</td><td style="color:var(--text2)">${k.dc||'—'}</td>
-    <td class="mono">${ds.length}</td><td class="mono" style="font-weight:500">${fmt(ds.reduce((s,d)=>s+(d.gia||0),0))}</td>
-    <td style="color:var(--text3)">${k.note||'—'}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editKH(${k.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delKH(${k.id})">🗑</button></td></tr>`;
-  }).join('') : '<tr><td colspan="7" class="empty-state">Chưa có khách hàng</td></tr>';
-}
-
-function maybeClose(e) { if(e.target.id=='modalOverlay') closeModal(); }
-function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-function openModal(html) { document.getElementById('modalBox').innerHTML=html; document.getElementById('modalOverlay').classList.add('open'); }
-
-function openModalDon(id) {
-  if (!ready) { showToast('Đang kết nối...'); return; }
-  let d = id ? S.don.find(x=>x.id==id) : null;
-  dItems = d ? JSON.parse(JSON.stringify(d.items||[])) : [];
-  recalc();
-  let spOpts = S.kho.length ? S.kho.map(k=>`<option value="${k.id}">${k.ten} (tồn: ${(k.ton||0)-(k.dat||0)+(d?(d.items||[]).filter(i=>i.spId==k.id).reduce((s,i)=>s+i.sl,0):0)})</option>`).join('') : '<option disabled>Chưa có sản phẩm — hãy thêm kho trước</option>';
-  openModal(`
-    <div class="modal-title">${d?'Sửa đơn hàng':'Thêm đơn hàng mới'}</div>
+  const spOpts=S.kho.map(k=>`<option value="${k.id}">${k.ten} (tồn:${(k.ton||0)-(k.dat||0)+(d?(d.items||[]).filter(i=>i.spId===k.id).reduce((s,i)=>s+i.sl,0):0)})</option>`).join('');
+  openModal(`<div class="modal-title">${d?'Sửa đơn':'Thêm đơn mới'}</div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Tên khách hàng</label>
-        <input class="form-input" id="fKH" list="khList" value="${d?d.kh:''}" placeholder="Nhập tên...">
-        <datalist id="khList">${S.khach.map(k=>`<option value="${k.ten}">`).join('')}</datalist>
-      </div>
+      <div class="form-group"><label class="form-label">Tên khách</label><input class="form-input" id="fKH" list="khList" value="${d?d.kh:''}" placeholder="Nhập tên..."><datalist id="khList">${S.khach.map(k=>`<option value="${k.ten}">`).join('')}</datalist></div>
       <div class="form-group"><label class="form-label">SĐT</label><input class="form-input" id="fSdt" value="${d?d.sdt:''}" placeholder="090..."></div>
     </div>
     <div class="form-group" style="margin-bottom:12px">
@@ -1261,179 +467,175 @@ function openModalDon(id) {
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select class="form-select" id="fSP" style="flex:2">${spOpts}</select>
         <input class="form-input" id="fSL" type="number" min="1" value="1" style="width:70px">
-        <button class="btn btn-primary btn-sm" onclick="addItem()">+ Thêm</button>
+        <button class="btn btn-primary btn-sm" onclick="addDonItem()">+ Thêm</button>
       </div>
       <div id="iList"></div>
     </div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Tổng tiền bán (đ)</label><input class="form-input" id="fGia" type="number" value="${d?d.gia:''}" placeholder="0" oninput="calcVon()"></div>
-      <div class="form-group"><label class="form-label">Tiền cọc nhận (đ)</label><input class="form-input" id="fCoc" type="number" value="${d?d.coc:0}" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Tiền cọc (đ)</label><input class="form-input" id="fCoc" type="number" value="${d?d.coc:0}" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Trạng thái</label>
         <select class="form-select" id="fTT">
-          <option value="coc" ${d&&d.tt=='coc'?'selected':''}>Chưa cọc</option>
-          <option value="dacoc" ${d&&d.tt=='dacoc'?'selected':''}>Đã cọc</option>
-          <option value="xong" ${d&&d.tt=='xong'?'selected':''}>Hoàn thành</option>
+          <option value="coc" ${d&&d.tt==='coc'?'selected':''}>Chưa cọc</option>
+          <option value="dacoc" ${d&&d.tt==='dacoc'?'selected':''}>Đã cọc</option>
+          <option value="xong" ${d&&d.tt==='xong'?'selected':''}>Hoàn thành</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">Ngày đặt</label><input class="form-input" id="fNgay" type="date" value="${d?d.ngay:new Date().toISOString().slice(0,10)}"></div>
     </div>
     <div class="form-group full"><label class="form-label">Ghi chú</label><input class="form-input" id="fNote" value="${d?d.note:''}" placeholder="Ghi chú..."></div>
     <div id="vonInfo"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Huỷ</button>
-      <button class="btn btn-primary" onclick="saveDon(${id||'null'})">${d?'Lưu thay đổi':'Thêm đơn'}</button>
-    </div>
-  `); renderIList(); calcVon();
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveDon(${id||'null'})">${d?'Lưu':'Thêm'}</button></div>`);
+  renderIList();calcVon();
 }
-
-function addItem() {
-  let spId = parseInt(document.getElementById('fSP').value);
-  let sl = parseInt(document.getElementById('fSL').value)||1;
-  let sp = S.kho.find(k=>k.id==spId); if(!sp) return;
-  let ex = dItems.find(i=>i.spId==spId);
-  if(ex) ex.sl+=sl; else dItems.push({spId,ten:sp.ten,sl});
-  renderIList(); calcVon();
+function addDonItem(){
+  const spId=parseInt(document.getElementById('fSP').value);
+  const sl=parseInt(document.getElementById('fSL').value)||1;
+  const sp=S.kho.find(k=>k.id===spId);if(!sp)return;
+  const ex=dItems.find(i=>i.spId===spId);
+  if(ex)ex.sl+=sl;else dItems.push({spId,ten:sp.ten,sl});
+  renderIList();calcVon();
 }
-function removeItem(i) { dItems.splice(i,1); renderIList(); calcVon(); }
-function renderIList() {
-  document.getElementById('iList').innerHTML = dItems.map((it,i)=>`
+function removeItem(i){dItems.splice(i,1);renderIList();calcVon();}
+function renderIList(){
+  document.getElementById('iList').innerHTML=dItems.map((it,i)=>`
     <div class="item-row"><span class="item-row-name">${it.ten}</span>
     <input class="item-row-qty" type="number" min="1" value="${it.sl}" onchange="dItems[${i}].sl=parseInt(this.value)||1;calcVon()">
-    <span class="item-row-price">${fmt((S.kho.find(k=>k.id==it.spId)||{gia:0}).gia*it.sl)}</span>
+    <span class="item-row-price">${fmt((S.kho.find(k=>k.id===it.spId)||{gia:0}).gia*it.sl)}</span>
     <button class="item-row-del" onclick="removeItem(${i})">✕</button></div>`).join('');
 }
-function calcVon() {
-  let von = dItems.reduce((s,it)=>{let k=S.kho.find(k=>k.id==it.spId);return s+(k?k.von*it.sl:0);},0);
-  let gia = parseInt(document.getElementById('fGia')?.value)||0;
-  let loi = gia-von;
-  let el = document.getElementById('vonInfo');
-  if(el&&von) el.innerHTML=`<div class="von-info">Tiền vốn: <b>${fmt(von)}</b> &nbsp;|&nbsp; Lợi nhuận: <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${loi>=0?'+':''}${fmt(loi)}</b></div>`;
-  else if(el) el.innerHTML='';
+function calcVon(){
+  const von=dItems.reduce((s,it)=>{const k=S.kho.find(k=>k.id===it.spId);return s+(k?k.von*it.sl:0);},0);
+  const gia=parseInt(document.getElementById('fGia')?.value)||0;
+  const loi=gia-von;
+  const el=document.getElementById('vonInfo');
+  if(el&&von)el.innerHTML=`<div class="von-info">Vốn: <b>${fmt(von)}</b> &nbsp;|&nbsp; Lợi nhuận: <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${loi>=0?'+':''}${fmt(loi)}</b></div>`;
+  else if(el)el.innerHTML='';
 }
-function saveDon(id) {
-  if(!dItems.length){alert('Vui lòng thêm ít nhất 1 mặt hàng!');return;}
-  let kh = document.getElementById('fKH').value.trim();
-  if(!kh){alert('Vui lòng nhập tên khách!');return;}
-  let von = dItems.reduce((s,it)=>{let k=S.kho.find(k=>k.id==it.spId);return s+(k?k.von*it.sl:0);},0);
-  let obj = {kh,sdt:document.getElementById('fSdt').value,items:JSON.parse(JSON.stringify(dItems)),von,
+function saveDon(id){
+  if(!dItems.length){alert('Thêm ít nhất 1 mặt hàng!');return;}
+  const kh=document.getElementById('fKH').value.trim();
+  if(!kh){alert('Nhập tên khách!');return;}
+  const von=dItems.reduce((s,it)=>{const k=S.kho.find(k=>k.id===it.spId);return s+(k?k.von*it.sl:0);},0);
+  const obj={kh,sdt:document.getElementById('fSdt').value,items:JSON.parse(JSON.stringify(dItems)),von,
     gia:parseInt(document.getElementById('fGia').value)||0,coc:parseInt(document.getElementById('fCoc').value)||0,
     tt:document.getElementById('fTT').value,ngay:document.getElementById('fNgay').value,note:document.getElementById('fNote').value};
-  if(id){let i=S.don.findIndex(d=>d.id==id);S.don[i]={...obj,id};}
+  if(id){const i=S.don.findIndex(d=>d.id===id);S.don[i]={...obj,id};}
   else{obj.id=S.nD++;S.don.push(obj);}
-  if(!S.khach.find(k=>k.ten==kh)) S.khach.push({id:S.nKH++,ten:kh,sdt:obj.sdt,dc:'',note:''});
-  closeModal(); saveDB();
+  if(!S.khach.find(k=>k.ten===kh))S.khach.push({id:S.nKH++,ten:kh,sdt:obj.sdt,dc:'',note:''});
+  closeModal();saveDB();
 }
-function delDon(id){if(confirm('Xoá đơn?')){S.don=S.don.filter(d=>d.id!=id);saveDB();}}
+function delDon(id){if(confirm('Xoá đơn?')){S.don=S.don.filter(d=>d.id!==id);saveDB();}}
 function editDon(id){openModalDon(id);}
 
-function openModalKho(id) {
+// ===== KHO HÀNG =====
+function renderKho(){
+  if(!S)return;
+  recalc();
+  document.getElementById('khoBody').innerHTML=S.kho.length?S.kho.map(k=>{
+    const con=(k.ton||0)-(k.dat||0);
+    const loi=(k.gia||0)-(k.von||0);
+    const pctLoi=k.von>0?Math.round(loi/k.von*100):0;
+    const info=[k.hang,k.dong,k.dungTich].filter(Boolean).join(' · ');
+    return `<tr>
+      <td class="mono" style="color:var(--text3)">${k.ma}</td>
+      <td><div style="font-weight:500">${k.ten}</div>${info?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${info}</div>`:''}</td>
+      <td class="mono">${fmtN(k.ton)}</td>
+      <td class="mono" style="color:var(--amber)">${fmtN(k.dat||0)}</td>
+      <td class="mono" style="font-weight:600;color:${con<=5?'var(--red)':'var(--green)'}">${fmtN(con)}</td>
+      <td class="mono" style="color:var(--text2)">${k.giaGoc?fmt(k.giaGoc):'—'}</td>
+      <td class="mono" style="color:var(--amber)">${fmt(k.von)}</td>
+      <td class="mono" style="font-weight:500">${fmt(k.gia)}</td>
+      <td class="${loi>=0?'profit-pos':'profit-neg'}">${loi>=0?'+':''}${fmt(loi)} (${pctLoi}%)</td>
+      <td><span class="badge ${con<=5?'badge-low':'badge-ok'}">${con<=5?'Sắp hết':'Còn hàng'}</span></td>
+      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editKho(${k.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delKho(${k.id})">🗑</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="11" class="empty-state">Chưa có sản phẩm</td></tr>';
+}
+function openModalKho(id){
   if(!ready){showToast('Đang kết nối...');return;}
-  let k = id?S.kho.find(x=>x.id==id):null;
+  const k=id?S.kho.find(x=>x.id===id):null;
   openModal(`<div class="modal-title">${k?'Sửa sản phẩm':'Thêm sản phẩm mới'}</div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Mã SP</label><input class="form-input" id="kMa" value="${k?k.ma:''}" placeholder="SP001"></div>
       <div class="form-group"><label class="form-label">Tên sản phẩm</label><input class="form-input" id="kTen" value="${k?k.ten:''}" placeholder="Tên hàng..."></div>
+      <div class="form-group"><label class="form-label">Hãng</label><input class="form-input" id="kHang" value="${k?k.hang||'':''}" placeholder="Celimax, CNP..."></div>
+      <div class="form-group"><label class="form-label">Dòng sản phẩm</label><input class="form-input" id="kDong" value="${k?k.dong||'':''}" placeholder="Retinal, Toner..."></div>
+      <div class="form-group full"><label class="form-label">Dung tích / Vật phẩm kèm</label><input class="form-input" id="kDungTich" value="${k?k.dungTich||'':''}" placeholder="30ml, set 3 món..."></div>
       <div class="form-group"><label class="form-label">Số lượng tồn</label><input class="form-input" id="kTon" type="number" value="${k?k.ton:0}" min="0"></div>
-      <div class="form-group"><label class="form-label">Giá gốc/cái (đ)</label><input class="form-input" id="kGiaGoc" type="number" value="${k?k.giaGoc||0:0}" min="0" placeholder="Giá niêm yết gốc" oninput="calcKhoPreview()"></div>
-      <div class="form-group"><label class="form-label">Giá săn sale/cái (đ) = vốn</label><input class="form-input" id="kVon" type="number" value="${k?k.von:0}" min="0" placeholder="Giá bạn mua được" oninput="calcKhoPreview()"></div>
-      <div class="form-group"><label class="form-label">Giá bán ra/cái (đ)</label><input class="form-input" id="kGia" type="number" value="${k?k.gia:0}" min="0" placeholder="Giá bán cho khách" oninput="calcKhoPreview()"></div>
+      <div class="form-group"><label class="form-label">Giá gốc/cái (đ)</label><input class="form-input" id="kGiaGoc" type="number" value="${k?k.giaGoc||0:0}" min="0" placeholder="Giá niêm yết" oninput="calcKhoPreview()"></div>
+      <div class="form-group"><label class="form-label">Giá sale/cái = vốn (đ)</label><input class="form-input" id="kVon" type="number" value="${k?k.von:0}" min="0" placeholder="Giá bạn mua" oninput="calcKhoPreview()"></div>
+      <div class="form-group full"><label class="form-label">Giá bán ra/cái (đ)</label><input class="form-input" id="kGia" type="number" value="${k?k.gia:0}" min="0" placeholder="Giá bán cho khách" oninput="calcKhoPreview()"></div>
     </div>
     <div id="khoPreview"></div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveKho(${id||'null'})">${k?'Lưu':'Thêm hàng'}</button></div>`);
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveKho(${id||'null'})">${k?'Lưu':'Thêm'}</button></div>`);
   calcKhoPreview();
 }
-
-function calcKhoPreview() {
-  let goc = parseInt(document.getElementById('kGiaGoc')?.value)||0;
-  let von = parseInt(document.getElementById('kVon')?.value)||0;
-  let ban = parseInt(document.getElementById('kGia')?.value)||0;
-  let el = document.getElementById('khoPreview');
-  if(!el || (!goc && !von && !ban)) return;
-  let tietKiem = goc-von;
-  let loiCai = ban-von;
-  let pctSale = goc>0?Math.round(tietKiem/goc*100):0;
-  let pctLoi = von>0?Math.round(loiCai/von*100):0;
-  let color = loiCai>0?'#27500A':loiCai<0?'#791F1F':'#6b6960';
-  let warn = loiCai<0?'<div style="color:#791F1F;font-size:12px;margin-top:6px">⚠ Bán dưới giá vốn — sẽ lỗ '+fmt(Math.abs(loiCai))+'/cái!</div>':
-             pctLoi<10&&ban>0?'<div style="color:#92400e;font-size:12px;margin-top:6px">Biên lợi thấp ('+pctLoi+'%) — cân nhắc tăng giá bán</div>':'';
-  el.innerHTML = `<div style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:12px;margin-top:4px;display:flex;gap:20px;flex-wrap:wrap;">
-    ${goc>0?'<span>Tiết kiệm so với gốc: <b style="color:#27500A">'+fmt(tietKiem)+' (-'+pctSale+'%)</b></span>':''}
-    <span>Lợi nhuận/cái: <b style="color:${color}">${loiCai>=0?'+':''}${fmt(loiCai)} (${pctLoi}%)</b></span>
-  </div>${warn}`;
+function calcKhoPreview(){
+  const goc=parseInt(document.getElementById('kGiaGoc')?.value)||0;
+  const von=parseInt(document.getElementById('kVon')?.value)||0;
+  const ban=parseInt(document.getElementById('kGia')?.value)||0;
+  const el=document.getElementById('khoPreview');
+  if(!el||(!goc&&!von&&!ban))return;
+  const tk=goc-von,loi=ban-von,pS=goc>0?Math.round(tk/goc*100):0,pL=von>0?Math.round(loi/von*100):0;
+  el.innerHTML=`<div class="von-info" style="display:flex;gap:16px;flex-wrap:wrap;">${goc>0?`<span>Tiết kiệm: <b style="color:var(--green)">${fmt(tk)} (-${pS}%)</b></span>`:''}<span>Lợi nhuận/cái: <b style="color:${loi>=0?'var(--green)':'var(--red)'}">${loi>=0?'+':''}${fmt(loi)} (${pL}%)</b></span></div>`;
 }
-function saveKho(id) {
-  let obj={ma:document.getElementById('kMa').value.trim()||'SP'+S.nK,ten:document.getElementById('kTen').value.trim(),
+function saveKho(id){
+  const obj={
+    ma:document.getElementById('kMa').value.trim()||'SP'+S.nK,
+    ten:document.getElementById('kTen').value.trim(),
+    hang:document.getElementById('kHang').value.trim(),
+    dong:document.getElementById('kDong').value.trim(),
+    dungTich:document.getElementById('kDungTich').value.trim(),
     ton:parseInt(document.getElementById('kTon').value)||0,
     giaGoc:parseInt(document.getElementById('kGiaGoc').value)||0,
     von:parseInt(document.getElementById('kVon').value)||0,
-    gia:parseInt(document.getElementById('kGia').value)||0,dat:0};
-  if(!obj.ten){alert('Vui lòng nhập tên!');return;}
-  if(id){let i=S.kho.findIndex(k=>k.id==id);S.kho[i]={...obj,id,dat:S.kho[i].dat};}
+    gia:parseInt(document.getElementById('kGia').value)||0,
+    dat:0
+  };
+  if(!obj.ten){alert('Nhập tên!');return;}
+  if(id){const i=S.kho.findIndex(k=>k.id===id);S.kho[i]={...obj,id,dat:S.kho[i].dat};}
   else{obj.id=S.nK++;S.kho.push(obj);}
-  closeModal(); saveDB();
+  closeModal();saveDB();
 }
-function delKho(id){if(confirm('Xoá sản phẩm?')){S.kho=S.kho.filter(k=>k.id!=id);saveDB();}}
+function delKho(id){if(confirm('Xoá sản phẩm?')){S.kho=S.kho.filter(k=>k.id!==id);saveDB();}}
 function editKho(id){openModalKho(id);}
 
-function openModalKH(id) {
+// ===== KHÁCH HÀNG =====
+function renderKH(){
+  if(!S)return;
+  document.getElementById('khBody').innerHTML=S.khach.length?S.khach.map(k=>{
+    const ds=S.don.filter(d=>d.kh===k.ten);
+    return `<tr><td style="font-weight:500">${k.ten}</td><td class="mono">${k.sdt||'—'}</td><td style="color:var(--text2)">${k.dc||'—'}</td>
+    <td class="mono">${ds.length}</td><td class="mono" style="font-weight:500">${fmt(ds.reduce((s,d)=>s+(d.gia||0),0))}</td>
+    <td style="color:var(--text3)">${k.note||'—'}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="editKH(${k.id})">✏️</button> <button class="btn btn-sm btn-danger" onclick="delKH(${k.id})">🗑</button></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty-state">Chưa có khách hàng</td></tr>';
+}
+function openModalKH(id){
   if(!ready){showToast('Đang kết nối...');return;}
-  let k = id?S.khach.find(x=>x.id==id):null;
-  openModal(`<div class="modal-title">${k?'Sửa khách hàng':'Thêm khách hàng'}</div>
+  const k=id?S.khach.find(x=>x.id===id):null;
+  openModal(`<div class="modal-title">${k?'Sửa khách':'Thêm khách hàng'}</div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Tên khách</label><input class="form-input" id="khTen" value="${k?k.ten:''}" placeholder="Nguyễn Văn A"></div>
+      <div class="form-group"><label class="form-label">Tên</label><input class="form-input" id="khTen" value="${k?k.ten:''}" placeholder="Nguyễn Văn A"></div>
       <div class="form-group"><label class="form-label">SĐT</label><input class="form-input" id="khSdt" value="${k?k.sdt:''}" placeholder="090..."></div>
       <div class="form-group"><label class="form-label">Địa chỉ</label><input class="form-input" id="khDc" value="${k?k.dc:''}" placeholder="Hà Nội..."></div>
-      <div class="form-group"><label class="form-label">Ghi chú</label><input class="form-input" id="khNote" value="${k?k.note:''}" placeholder="VIP, khách quen..."></div>
+      <div class="form-group"><label class="form-label">Ghi chú</label><input class="form-input" id="khNote" value="${k?k.note:''}" placeholder="VIP..."></div>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveKH(${id||'null'})">${k?'Lưu':'Thêm khách'}</button></div>`);
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Huỷ</button><button class="btn btn-primary" onclick="saveKH(${id||'null'})">${k?'Lưu':'Thêm'}</button></div>`);
 }
-function saveKH(id) {
-  let obj={ten:document.getElementById('khTen').value.trim(),sdt:document.getElementById('khSdt').value,dc:document.getElementById('khDc').value,note:document.getElementById('khNote').value};
-  if(!obj.ten){alert('Vui lòng nhập tên!');return;}
-  if(id){let i=S.khach.findIndex(k=>k.id==id);S.khach[i]={...obj,id};}
+function saveKH(id){
+  const obj={ten:document.getElementById('khTen').value.trim(),sdt:document.getElementById('khSdt').value,dc:document.getElementById('khDc').value,note:document.getElementById('khNote').value};
+  if(!obj.ten){alert('Nhập tên!');return;}
+  if(id){const i=S.khach.findIndex(k=>k.id===id);S.khach[i]={...obj,id};}
   else{obj.id=S.nKH++;S.khach.push(obj);}
-  closeModal(); saveDB();
+  closeModal();saveDB();
 }
-function delKH(id){if(confirm('Xoá khách?')){S.khach=S.khach.filter(k=>k.id!=id);saveDB();}}
+function delKH(id){if(confirm('Xoá khách?')){S.khach=S.khach.filter(k=>k.id!==id);saveDB();}}
 function editKH(id){openModalKH(id);}
 
-function exportExcel() {
-  if(!ready){showToast('Đang kết nối...');return;}
-  recalc();
-  let wb=XLSX.utils.book_new();
-  let ttL={coc:'Chưa cọc',dacoc:'Đã cọc',xong:'Hoàn thành'};
-  let d1=[['#','Khách','SĐT','Mặt hàng','SL','Tiền vốn','Giá bán','Lợi nhuận','Cọc','Trạng thái','Ngày','Ghi chú']];
-  S.don.forEach((d,i)=>d1.push([i+1,d.kh,d.sdt,(d.items||[]).map(i=>i.ten+' x'+i.sl).join(', '),(d.items||[]).reduce((s,i)=>s+i.sl,0),d.von,d.gia,(d.gia||0)-(d.von||0),d.coc,ttL[d.tt]||d.tt,d.ngay,d.note]));
-  let dt=S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0);
-  let loi=S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+((d.gia||0)-(d.von||0)),0);
-  d1.push([]);d1.push(['','','','','','Tổng doanh thu:',dt]);d1.push(['','','','','','Tổng lợi nhuận:','',loi]);
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d1),'Đơn hàng');
-  let d2=[['Mã','Tên hàng','Tổng tồn','Đang đặt','Còn lại','Giá vốn','Giá bán','Tình trạng']];
-  S.kho.forEach(k=>d2.push([k.ma,k.ten,k.ton,k.dat,(k.ton||0)-(k.dat||0),k.von,k.gia,((k.ton||0)-(k.dat||0))<=5?'Sắp hết':'Còn hàng']));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d2),'Kho hàng');
-  let d3=[['Tên khách','SĐT','Địa chỉ','Tổng đơn','Tổng chi tiêu','Ghi chú']];
-  S.khach.forEach(k=>{let ds=S.don.filter(d=>d.kh==k.ten);d3.push([k.ten,k.sdt,k.dc,ds.length,ds.reduce((s,d)=>s+(d.gia||0),0),k.note]);});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d3),'Khách hàng');
-  XLSX.writeFile(wb,'quan_ly_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  showToast('Đã xuất Excel');
-}
-
-function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
-}
-// Close sidebar when nav item clicked on mobile
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    if (window.innerWidth <= 700) {
-      document.querySelector('.sidebar').classList.remove('open');
-      document.getElementById('sidebarOverlay').classList.remove('show');
-    }
-  });
-});
-
-// ===================== CÔNG VIỆC =====================
-let cvDefaultDef = [
+// ===== CÔNG VIỆC =====
+const cvDefaultDef=[
   {id:1,ten:'Tìm nguồn hàng',pts:9},
   {id:2,ten:'Chuyển hàng về Việt Nam',pts:9},
   {id:3,ten:'Tạo website / app quản lý',pts:9},
@@ -1443,137 +645,167 @@ let cvDefaultDef = [
   {id:7,ten:'Giao hàng / ship lẻ',pts:7},
   {id:8,ten:'Quản lý đơn & kho hàng',pts:5},
 ];
-let cvQtyDef = [
+const cvQtyDef=[
   {id:101,ten:'Đăng bài / content MXH',pts:1,q1:0,q2:0,unit:'bài'},
   {id:102,ten:'Rep khách hàng',pts:0.5,q1:0,q2:0,unit:'khách'},
 ];
-let cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-let cvNextId = 100;
+let cvTasks={def:cvDefaultDef.map(t=>({...t,who:null,deadline:'',doneDate:''})),extra:[],qty:cvQtyDef.map(t=>({...t}))};
+let cvNextId=100;
 
-function resetCV() {
-  if (!confirm('Reset tất cả tick về chưa làm? Công việc phát sinh cũng bị xoá.')) return;
-  cvTasks = {def: cvDefaultDef.map(t=>({...t,who:null})), extra: [], qty: cvQtyDef.map(t=>({...t}))};
-  cvNextId = 100;
-  renderCV();
+function resetCV(){
+  if(!confirm('Reset tất cả về chưa làm? Việc phát sinh cũng bị xoá.'))return;
+  cvTasks={def:cvDefaultDef.map(t=>({...t,who:null,deadline:'',doneDate:''})),extra:[],qty:cvQtyDef.map(t=>({...t}))};
+  cvNextId=100;renderCV();
 }
-function cvToggleWho(type,id,who) {
-  let arr = type=='def'?cvTasks.def:cvTasks.extra;
-  let t = arr.find(x=>x.id==id); if(!t) return;
-  if(t.who==who) t.who=null;
-  else if(t.who&&t.who!=who) t.who='b';
+function cvToggleWho(type,id,who){
+  const arr=type==='def'?cvTasks.def:cvTasks.extra;
+  const t=arr.find(x=>x.id===id);if(!t)return;
+  if(t.who===who)t.who=null;
+  else if(t.who&&t.who!==who)t.who='b';
   else t.who=who;
   renderCV();
 }
-function addCVExtra() {
-  let name = document.getElementById('cvNewName').value.trim();
-  let pts = Math.min(10, Math.max(1, parseInt(document.getElementById('cvNewPts').value)||5));
-  if(!name) { alert('Nhập tên công việc!'); return; }
-  cvTasks.extra.push({id:cvNextId++, ten:name, pts, who:null});
+function setCVDeadline(id,val){
+  const t=[...cvTasks.def,...cvTasks.extra].find(x=>x.id===id);
+  if(t)t.deadline=val;renderCV();
+}
+function setCVDoneDate(id,val){
+  const t=[...cvTasks.def,...cvTasks.extra].find(x=>x.id===id);
+  if(t)t.doneDate=val;renderCV();
+}
+function getCVBonus(t){
+  if(!t.who||!t.deadline||!t.doneDate)return{mult:1,label:'',cls:''};
+  const diff=Math.round((new Date(t.deadline)-new Date(t.doneDate))/(864e5));
+  if(diff>0)return{mult:1.5,label:'+50% sớm '+diff+'n',cls:'cv-bonus cv-early'};
+  if(diff===0)return{mult:1,label:'Đúng hạn',cls:'cv-bonus cv-ontime'};
+  return{mult:0.7,label:'-30% trễ '+Math.abs(diff)+'n',cls:'cv-bonus cv-late'};
+}
+function updateCVQty(id,who,val){
+  const t=(cvTasks.qty||[]).find(x=>x.id===id);if(!t)return;
+  if(who===1)t.q1=Math.max(0,parseInt(val)||0);
+  else t.q2=Math.max(0,parseInt(val)||0);
+  renderCV();
+}
+function addCVExtra(){
+  const name=document.getElementById('cvNewName').value.trim();
+  const pts=Math.min(10,Math.max(1,parseInt(document.getElementById('cvNewPts').value)||5));
+  if(!name){alert('Nhập tên công việc!');return;}
+  cvTasks.extra.push({id:cvNextId++,ten:name,pts,who:null,deadline:'',doneDate:''});
   document.getElementById('cvNewName').value='';
   document.getElementById('cvNewPts').value='5';
   renderCV();
 }
-function delCVExtra(id) { cvTasks.extra=cvTasks.extra.filter(x=>x.id!=id); renderCV(); }
-function updateCVQty(id,who,val){
-  let t=(cvTasks.qty||[]).find(x=>x.id==id);if(!t)return;
-  if(who==1)t.q1=Math.max(0,parseInt(val)||0);
-  else t.q2=Math.max(0,parseInt(val)||0);
-  renderCV();
-}
-function cvQtyRow(t){
-  let pts1=(t.q1*t.pts).toFixed(1);
-  let pts2=(t.q2*t.pts).toFixed(1);
-  return`<div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--surface2);background:#fafffe;" onmouseover="this.style.background='#f3fdf7'" onmouseout="this.style.background='#fafffe'">
-    <div style="flex:1;">
-      <div style="font-size:15px;font-weight:400;color:var(--text);">${t.ten}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${t.pts} điểm/${t.unit} · Tổng: ${t.q1+t.q2} ${t.unit}</div>
-    </div>
-    <span style="font-size:11px;color:#2d6a4f;background:#d8f3dc;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;">Linh hoạt</span>
-    <div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#1e40af;font-weight:500;">Phương</div>
-      <input type="number" min="0" value="${t.q1}" onchange="updateCVQty(${t.id},1,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #b3c8fb;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#1e40af;">${pts1}đ</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:85px;">
-      <div style="font-size:11px;color:#2d6a4f;font-weight:500;">Nhi</div>
-      <input type="number" min="0" value="${t.q2}" onchange="updateCVQty(${t.id},2,this.value)" style="width:70px;height:32px;padding:0 8px;border:1px solid #86efac;border-radius:8px;font-size:14px;font-family:monospace;background:var(--surface);color:var(--text);text-align:center;">
-      <div style="font-size:11px;color:#2d6a4f;">${pts2}đ</div>
-    </div>
-  </div>`;
-}
-function calcCV() {
+function delCVExtra(id){cvTasks.extra=cvTasks.extra.filter(x=>x.id!==id);renderCV();}
+
+function calcCV(){
   let s1=0,s2=0,tot=0;
   [...cvTasks.def,...cvTasks.extra].forEach(t=>{
-    if(t.who=='1'){s1+=t.pts;tot+=t.pts;}
-    else if(t.who=='2'){s2+=t.pts;tot+=t.pts;}
-    else if(t.who=='b'){s1+=t.pts;s2+=t.pts;tot+=t.pts*2;}
+    const {mult}=getCVBonus(t);
+    const p=parseFloat((t.pts*mult).toFixed(1));
+    if(t.who==='1'){s1+=p;tot+=p;}
+    else if(t.who==='2'){s2+=p;tot+=p;}
+    else if(t.who==='b'){s1+=p;s2+=p;tot+=p*2;}
   });
   (cvTasks.qty||[]).forEach(t=>{s1+=t.q1*t.pts;s2+=t.q2*t.pts;tot+=(t.q1+t.q2)*t.pts;});
   return{s1:parseFloat(s1.toFixed(1)),s2:parseFloat(s2.toFixed(1)),tot:parseFloat(tot.toFixed(1))};
 }
-function cvTaskRow(t,type) {
-  let w1 = t.who=='1'?'active1':t.who=='b'?'activeb':'';
-  let w2 = t.who=='2'?'active2':t.who=='b'?'activeb':'';
-  let badge = t.who
-    ? '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#d8f3dc;color:#2d6a4f;">✓</span>'
-    : '<span style="min-width:52px;text-align:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;background:#fef3c7;color:#92400e;">Chưa</span>';
-  let delBtn = type=='extra' ? `<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;flex-shrink:0;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#c5c3bb'">✕</button>` : '';
-  let btn1Style = w1=='active1' ? 'background:#e8f0fe;border-color:#b3c8fb;color:#1e40af;' : w1=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  let btn2Style = w2=='active2' ? 'background:#e6f7ee;border-color:#86efac;color:#2d6a4f;' : w2=='activeb' ? 'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;' : '';
-  return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--surface2);transition:background 0.1s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-    <span style="flex:1;font-size:15px;font-weight:400;color:var(--text);line-height:1.4;">${t.ten}</span>
-    <span style="font-size:13px;color:var(--text2);white-space:nowrap;min-width:54px;text-align:right;">${t.pts} điểm</span>
-    ${badge}
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button onclick="cvToggleWho('${type}',${t.id},'1')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn1Style}">Phương</button>
-      <button onclick="cvToggleWho('${type}',${t.id},'2')" style="min-width:72px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;color:var(--text2);${btn2Style}">Nhi</button>
-    </div>
-    ${delBtn}
-  </div>`;
+
+function cvTaskRow(t,type){
+  const w1=t.who==='1'?'cv-w1':t.who==='b'?'cv-wb':'';
+  const w2=t.who==='2'?'cv-w2':t.who==='b'?'cv-wb':'';
+  const {label,cls,mult}=getCVBonus(t);
+  const effPts=parseFloat((t.pts*mult).toFixed(1));
+  const badge=t.who?'<span class="cv-task-badge cv-done">✓</span>':'<span class="cv-task-badge cv-no">Chưa</span>';
+  const bonusBadge=label?`<span class="${cls}">${label}</span>`:'';
+  const del=type==='extra'?`<button onclick="delCVExtra(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;">✕</button>`:'';
+  const b1Style=w1==='cv-w1'?'background:#e8f0fe;border-color:#b3c8fb;color:var(--blue);':w1==='cv-wb'?'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;':'';
+  const b2Style=w2==='cv-w2'?'background:#e6f7ee;border-color:#86efac;color:var(--green);':w2==='cv-wb'?'background:linear-gradient(90deg,#e8f0fe 50%,#e6f7ee 50%);border-color:#b3c8fb;color:#333;':'';
+  return '<div class="cv-task">'
+    +'<div class="cv-task-main">'
+    +'<span class="cv-task-name">'+t.ten+'</span>'
+    +'<span class="cv-task-pts">'+t.pts+'đ'+(mult!==1?' → <b>'+effPts+'đ</b>':'')+'</span>'
+    +badge+bonusBadge
+    +'<button class="cv-who-btn" style="'+b1Style+'" onclick="cvToggleWho(\''+type+'\','+t.id+',\'1\')">Phương</button>'
+    +'<button class="cv-who-btn" style="'+b2Style+'" onclick="cvToggleWho(\''+type+'\','+t.id+',\'2\')">Nhi</button>'
+    +del
+    +'</div>'
+    +'<div class="cv-task-dates">'
+    +'<label>Deadline:</label>'
+    +'<input type="date" value="'+(t.deadline||'')+'" onchange="setCVDeadline('+t.id+',this.value)">'
+    +'<label style="margin-left:8px;">Xong lúc:</label>'
+    +'<input type="date" value="'+(t.doneDate||'')+'" onchange="setCVDoneDate('+t.id+',this.value)">'
+    +'</div>'
+    +'</div>';
 }
-function renderCV() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let p2 = tot>0?Math.round(s2/tot*100):50;
-  let all = [...cvTasks.def,...cvTasks.extra];
-  let done = all.filter(t=>t.who).length;
-  let statsEl = document.getElementById('cvStats');
-  if(!statsEl) return;
-  statsEl.innerHTML = `
+
+function cvQtyRow(t){
+  const p1=parseFloat((t.q1*t.pts).toFixed(1));
+  const p2=parseFloat((t.q2*t.pts).toFixed(1));
+  return '<div class="cv-qty-row">'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:15px;color:var(--text);">'+t.ten+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-top:3px;">'+t.pts+' điểm/'+t.unit+' · Tổng: '+(t.q1+t.q2)+' '+t.unit+'</div>'
+    +'</div>'
+    +'<span class="cv-qty-tag">Linh hoạt</span>'
+    +'<div style="width:1px;height:40px;background:var(--border);flex-shrink:0;"></div>'
+    +'<div class="cv-qty-block">'
+    +'<div style="font-size:11px;color:var(--blue);font-weight:500;">Phương</div>'
+    +'<input class="cv-qty-input" type="number" min="0" value="'+t.q1+'" onchange="updateCVQty('+t.id+',1,this.value)" style="border-color:#b3c8fb;">'
+    +'<div style="font-size:11px;color:var(--blue);">'+p1+'đ</div>'
+    +'</div>'
+    +'<div class="cv-qty-block">'
+    +'<div style="font-size:11px;color:var(--green);font-weight:500;">Nhi</div>'
+    +'<input class="cv-qty-input" type="number" min="0" value="'+t.q2+'" onchange="updateCVQty('+t.id+',2,this.value)" style="border-color:#86efac;">'
+    +'<div style="font-size:11px;color:var(--green);">'+p2+'đ</div>'
+    +'</div>'
+    +'</div>';
+}
+
+function renderCV(){
+  const {s1,s2,tot}=calcCV();
+  const p1=tot>0?Math.round(s1/tot*100):50;
+  const p2=tot>0?Math.round(s2/tot*100):50;
+  const all=[...cvTasks.def,...cvTasks.extra];
+  const done=all.filter(t=>t.who).length;
+  const statsEl=document.getElementById('cvStats');
+  if(!statsEl)return;
+  statsEl.innerHTML=`
     <div class="stat"><div class="stat-label">Tổng việc</div><div class="stat-val">${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Đã hoàn thành</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
-    <div class="stat"><div class="stat-label">Tổng điểm</div><div class="stat-val" style="color:var(--blue);font-size:17px">${tot}</div></div>
+    <div class="stat"><div class="stat-label">Đã xong</div><div class="stat-val" style="color:var(--green)">${done}/${all.length}</div></div>
+    <div class="stat"><div class="stat-label">Điểm Phương</div><div class="stat-val" style="color:var(--blue)">${s1}</div></div>
+    <div class="stat"><div class="stat-label">Điểm Nhi</div><div class="stat-val" style="color:var(--green)">${s2}</div></div>
   `;
   document.getElementById('cvProgWrap').innerHTML=`
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-      <span style="color:#1e40af;font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
-      <span style="color:#2d6a4f;font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+      <span style="color:var(--blue);font-weight:500">● Phương: ${s1}đ (${p1}%)</span>
+      <span style="color:var(--green);font-weight:500">● Nhi: ${s2}đ (${p2}%)</span>
     </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;">
-      <div style="width:${p1}%;background:#4E8DDE;height:100%;transition:width 0.4s;"></div>
-      <div style="width:${p2}%;background:#2d6a4f;height:100%;transition:width 0.4s;"></div>
+    <div class="prog-bar">
+      <div class="prog-seg" style="width:${p1}%;background:#4E8DDE;"></div>
+      <div class="prog-seg" style="width:${p2}%;background:var(--green);"></div>
     </div>
-    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:5px;">Dựa trên ${done} công việc đã hoàn thành</div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-top:4px;">Dựa trên ${done} công việc đã hoàn thành</div>
   `;
-  document.getElementById('cvDefList').innerHTML = cvTasks.def.map(t=>cvTaskRow(t,'def')).join('') + (cvTasks.qty||[]).map(cvQtyRow).join('');
-  document.getElementById('cvExtraList').innerHTML = cvTasks.extra.length
-    ? cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
-    : '<div style="padding:14px 20px;font-size:13px;color:var(--text3);">Chưa có việc phát sinh</div>';
-  document.getElementById('cvExtraCount').textContent = cvTasks.extra.length + ' việc';
-  document.getElementById('cvResult').innerHTML = `
+  document.getElementById('cvDefList').innerHTML=
+    cvTasks.def.map(t=>cvTaskRow(t,'def')).join('')+
+    (cvTasks.qty||[]).map(cvQtyRow).join('');
+  document.getElementById('cvExtraList').innerHTML=cvTasks.extra.length
+    ?cvTasks.extra.map(t=>cvTaskRow(t,'extra')).join('')
+    :'<div class="empty-state">Chưa có việc phát sinh</div>';
+  document.getElementById('cvExtraCount').textContent=cvTasks.extra.length+' việc';
+  document.getElementById('cvResult').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
       <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Phương</div>
-        <div style="font-size:30px;font-weight:600;color:#1e40af;letter-spacing:-1px;margin-bottom:4px;">${p1}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s1} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#1e40af">${p1}%</b></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương</div>
+        <div style="font-size:28px;font-weight:600;color:var(--blue);letter-spacing:-1px;">${p1}%</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">${s1} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2);">→ Đề xuất chia <b style="color:var(--blue)">${p1}%</b></div>
       </div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhi</div>
-        <div style="font-size:30px;font-weight:600;color:#2d6a4f;letter-spacing:-1px;margin-bottom:4px;">${p2}%</div>
-        <div style="font-size:12px;color:var(--text2);">${s2} / ${tot} điểm</div>
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">→ Đề xuất chia <b style="color:#2d6a4f">${p2}%</b></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green);letter-spacing:-1px;">${p2}%</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">${s2} / ${tot} điểm</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2);">→ Đề xuất chia <b style="color:var(--green)">${p2}%</b></div>
       </div>
     </div>
     <div style="font-size:12px;color:var(--text2);background:var(--surface2);border-radius:var(--radius);padding:10px 14px;text-align:center;">
@@ -1581,89 +813,85 @@ function renderCV() {
     </div>
   `;
 }
-function syncToTien() {
-  let {s1,s2,tot} = calcCV();
-  let p1 = tot>0?Math.round(s1/tot*100):50;
-  let el1 = document.getElementById('tienPct1');
-  let el2 = document.getElementById('tienPct2');
-  if(el1) el1.value=p1;
-  if(el2) el2.value=100-p1;
+function syncToTien(){
+  const {s1,s2,tot}=calcCV();
+  const p1=tot>0?Math.round(s1/tot*100):50;
+  const el1=document.getElementById('tienPct1');
+  const el2=document.getElementById('tienPct2');
+  if(el1)el1.value=p1;if(el2)el2.value=100-p1;
   showPage('tien');
 }
 
-// ===================== CHIA TIỀN =====================
-let tienChi = {1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
-
-function syncTienPct(who) {
-  let v = Math.min(100, Math.max(0, parseInt(document.getElementById('tienPct'+who).value)||0));
-  let other = who==1?2:1;
-  let otherEl = document.getElementById('tienPct'+other);
-  if(otherEl) otherEl.value = 100-v;
+// ===== CHIA TIỀN =====
+let tienChi={1:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}],2:[{ten:'Vốn hàng',so:0},{ten:'Chi phí khác',so:0}]};
+function syncTienPct(who){
+  const v=Math.min(100,Math.max(0,parseInt(document.getElementById('tienPct'+who).value)||0));
+  const el=document.getElementById('tienPct'+(who===1?2:1));
+  if(el)el.value=100-v;
   renderTienPage();
 }
-function addTienChi(who) { tienChi[who].push({ten:'',so:0}); renderTienPage(); }
-function delTienChi(who,i) { tienChi[who].splice(i,1); renderTienPage(); }
-function renderTienChiList(who) {
+function addTienChi(who){tienChi[who].push({ten:'',so:0});renderTienPage();}
+function delTienChi(who,i){tienChi[who].splice(i,1);renderTienPage();}
+function renderTienChiList(who){
   return tienChi[who].map((c,i)=>`
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].ten=this.value">
-      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
-      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:#c5c3bb;font-size:14px;padding:2px 4px;">✕</button>
+    <div class="chi-row">
+      <input placeholder="Tên khoản chi..." value="${c.ten}" style="flex:1;" onchange="tienChi[${who}][${i}].ten=this.value">
+      <input type="number" value="${c.so||''}" placeholder="Số tiền (đ)" style="width:130px;" onchange="tienChi[${who}][${i}].so=parseInt(this.value)||0;renderTienPage()">
+      <button onclick="delTienChi(${who},${i})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 4px;">✕</button>
     </div>`).join('');
 }
-function renderTienPage() {
-  let p1El = document.getElementById('tienPct1');
-  let p2El = document.getElementById('tienPct2');
-  if(!p1El) return;
-  let p1 = parseInt(p1El.value)||50;
-  let p2 = parseInt(p2El.value)||50;
-  let warnEl = document.getElementById('tienPctWarn');
-  if(warnEl) warnEl.textContent = p1+p2!=100?'⚠ Tổng phải = 100%':'';
-  let p1pctEl = document.getElementById('tienP1pct');
-  let p2pctEl = document.getElementById('tienP2pct');
-  if(p1pctEl) p1pctEl.textContent='Tỷ lệ: '+p1+'%';
-  if(p2pctEl) p2pctEl.textContent='Tỷ lệ: '+p2+'%';
-  // Doanh thu từ đơn hoàn thành
-  let dt = S ? S.don.filter(d=>d.tt=='xong').reduce((s,d)=>s+(d.gia||0),0) : 0;
-  let t1 = tienChi[1].reduce((s,c)=>s+(c.so||0),0);
-  let t2 = tienChi[2].reduce((s,c)=>s+(c.so||0),0);
-  let tongChi = t1+t2, loi = dt-tongChi;
-  let d1 = loi>0?Math.round(loi*p1/100):0;
-  let d2 = loi>0?Math.round(loi*p2/100):0;
-  let sumEl = document.getElementById('tienSummary');
-  if(sumEl) sumEl.innerHTML=`
+function renderTienPage(){
+  const p1El=document.getElementById('tienPct1');
+  const p2El=document.getElementById('tienPct2');
+  if(!p1El)return;
+  const p1=parseInt(p1El.value)||50;
+  const p2=parseInt(p2El.value)||50;
+  const warnEl=document.getElementById('tienPctWarn');
+  if(warnEl)warnEl.textContent=p1+p2!==100?'⚠ Tổng phải = 100%':'';
+  const p1pct=document.getElementById('tienP1pct');
+  const p2pct=document.getElementById('tienP2pct');
+  if(p1pct)p1pct.textContent='Tỷ lệ: '+p1+'%';
+  if(p2pct)p2pct.textContent='Tỷ lệ: '+p2+'%';
+  const dt=S?S.don.filter(d=>d.tt==='xong').reduce((s,d)=>s+(d.gia||0),0):0;
+  const t1=tienChi[1].reduce((s,c)=>s+(c.so||0),0);
+  const t2=tienChi[2].reduce((s,c)=>s+(c.so||0),0);
+  const tongChi=t1+t2,loi=dt-tongChi;
+  const d1=loi>0?Math.round(loi*p1/100):0;
+  const d2=loi>0?Math.round(loi*p2/100):0;
+  const sumEl=document.getElementById('tienSummary');
+  if(sumEl)sumEl.innerHTML=`
     <div class="stat"><div class="stat-label">Doanh thu (đơn xong)</div><div class="stat-val" style="color:var(--blue);font-size:17px">${fmt(dt)}</div></div>
     <div class="stat"><div class="stat-label">Tổng chi phí</div><div class="stat-val" style="color:var(--amber);font-size:17px">${fmt(tongChi)}</div></div>
     <div class="stat"><div class="stat-label">Lợi nhuận thực</div><div class="stat-val" style="color:${loi>=0?'var(--green)':'var(--red)'};font-size:17px">${fmt(loi)}</div></div>
   `;
-  let chi1El = document.getElementById('tienChi1List');
-  let chi2El = document.getElementById('tienChi2List');
-  if(chi1El) chi1El.innerHTML = renderTienChiList(1);
-  if(chi2El) chi2El.innerHTML = renderTienChiList(2);
-  let p1rEl = document.getElementById('tienP1result');
-  let p2rEl = document.getElementById('tienP2result');
-  if(p1rEl) p1rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p1}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d1)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>`;
-  if(p2rEl) p2rEl.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận ${p2}% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">${fmt(d2)}</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>`;
-  let bar1 = Math.round(p1/(p1+p2||1)*100);
-  let resEl = document.getElementById('tienResult');
-  if(resEl) resEl.innerHTML=`
+  const chi1El=document.getElementById('tienChi1List');
+  const chi2El=document.getElementById('tienChi2List');
+  if(chi1El)chi1El.innerHTML=renderTienChiList(1);
+  if(chi2El)chi2El.innerHTML=renderTienChiList(2);
+  const p1rEl=document.getElementById('tienP1result');
+  const p2rEl=document.getElementById('tienP2result');
+  if(p1rEl)p1rEl.innerHTML='<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận '+p1+'% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">'+fmt(d1)+'</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:'+(d1-t1>=0?'var(--green)':'var(--red)')+'">'+fmt(d1-t1)+'</b></div>';
+  if(p2rEl)p2rEl.innerHTML='<div style="font-size:11px;color:var(--text2);margin-bottom:3px">Nhận '+p2+'% lợi nhuận</div><div style="font-size:17px;font-weight:600;color:var(--green)">'+fmt(d2)+'</div><div style="font-size:11px;color:var(--text2);margin-top:3px">Thực nhận (trừ chi): <b style="color:'+(d2-t2>=0?'var(--green)':'var(--red)')+'">'+fmt(d2-t2)+'</b></div>';
+  const bar1=Math.round(p1/(p1+p2||1)*100);
+  const resEl=document.getElementById('tienResult');
+  if(resEl)resEl.innerHTML=`
     <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;">
-      <span style="color:#1e40af">Phương — ${p1}%</span><span style="color:#2d6a4f">Nhi — ${p2}%</span>
+      <span style="color:var(--blue)">Phương — ${p1}%</span><span style="color:var(--green)">Nhi — ${p2}%</span>
     </div>
-    <div style="height:12px;background:var(--surface2);border-radius:20px;overflow:hidden;display:flex;margin-bottom:14px;">
-      <div style="width:${bar1}%;background:#4E8DDE;height:100%;"></div>
-      <div style="width:${100-bar1}%;background:#2d6a4f;height:100%;"></div>
+    <div class="prog-bar" style="height:12px;margin-bottom:14px;">
+      <div class="prog-seg" style="width:${bar1}%;background:#4E8DDE;"></div>
+      <div class="prog-seg" style="width:${100-bar1}%;background:var(--green);"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Phương nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#1e40af;margin-bottom:4px;">${fmt(d1)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Phương nhận</div>
+        <div style="font-size:22px;font-weight:600;color:var(--blue);">${fmt(d1)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;">Thực nhận: <b style="color:${d1-t1>=0?'var(--green)':'var(--red)'}">${fmt(d1-t1)}</b></div>
       </div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:5px;">Nhi nhận</div>
-        <div style="font-size:24px;font-weight:600;color:#2d6a4f;margin-bottom:4px;">${fmt(d2)}</div>
-        <div style="font-size:12px;color:var(--text2);">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Nhi nhận</div>
+        <div style="font-size:22px;font-weight:600;color:var(--green);">${fmt(d2)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;">Thực nhận: <b style="color:${d2-t2>=0?'var(--green)':'var(--red)'}">${fmt(d2-t2)}</b></div>
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--text2);text-align:center;background:var(--surface2);border-radius:var(--radius);padding:10px;">
@@ -1671,6 +899,36 @@ function renderTienPage() {
     </div>
   `;
 }
+
+// ===== EXPORT EXCEL =====
+function exportExcel(){
+  if(!S){showToast('Đang kết nối...');return;}
+  if(typeof XLSX==='undefined'){alert('Thư viện chưa tải!');return;}
+  recalc();
+  const wb=XLSX.utils.book_new();
+  const ttL={coc:'Chưa cọc',dacoc:'Đã cọc',xong:'Hoàn thành'};
+  const d1=[['#','Khách','SĐT','Mặt hàng','SL','Vốn','Giá bán','Lợi nhuận','Cọc','Trạng thái','Ngày','Ghi chú']];
+  S.don.forEach((d,i)=>d1.push([i+1,d.kh,d.sdt,(d.items||[]).map(i=>i.ten+'x'+i.sl).join(', '),(d.items||[]).reduce((s,i)=>s+i.sl,0),d.von,d.gia,(d.gia||0)-(d.von||0),d.coc,ttL[d.tt]||d.tt,d.ngay,d.note]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d1),'Đơn hàng');
+  const d2=[['Mã','Tên','Hãng','Dòng SP','Dung tích','Tổng tồn','Đang đặt','Còn lại','Giá gốc','Giá sale','Giá bán','Lời/cái']];
+  S.kho.forEach(k=>{const con=(k.ton||0)-(k.dat||0);d2.push([k.ma,k.ten,k.hang||'',k.dong||'',k.dungTich||'',k.ton,k.dat||0,con,k.giaGoc||0,k.von,k.gia,(k.gia||0)-(k.von||0)]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d2),'Kho hàng');
+  const d3=[['Tên khách','SĐT','Địa chỉ','Tổng đơn','Tổng chi tiêu','Ghi chú']];
+  S.khach.forEach(k=>{const ds=S.don.filter(d=>d.kh===k.ten);d3.push([k.ten,k.sdt,k.dc,ds.length,ds.reduce((s,d)=>s+(d.gia||0),0),k.note]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d3),'Khách hàng');
+  XLSX.writeFile(wb,'quan_ly_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('Đã xuất Excel');
+}
+
+// Close sidebar on mobile nav click
+document.querySelectorAll('.nav-item').forEach(el=>{
+  el.addEventListener('click',()=>{
+    if(window.innerWidth<=700){
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    }
+  });
+});
 </script>
 </body>
 </html>
